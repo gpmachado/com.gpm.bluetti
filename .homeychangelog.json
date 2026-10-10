@@ -1,4 +1,7 @@
 {
+  "0.3.2": {
+    "en": "Lower memory use."
+  },
   "0.3.1": {
     "en": "Added link to the Homey Community topic."
   },
