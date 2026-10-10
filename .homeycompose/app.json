@@ -1,6 +1,6 @@
 {
   "id": "com.gpm.bluetti",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "compatibility": ">=12.0.0",
   "sdk": 3,
   "platforms": [
@@ -40,5 +40,7 @@
   "bugs": {
     "url": "https://github.com/gpmachado/com.gpm.bluetti/issues"
   },
-  "homepage": "https://github.com/gpmachado/com.gpm.bluetti"
+  "homepage": "https://github.com/gpmachado/com.gpm.bluetti",
+  "support": "https://community.homey.app/t/app-pro-bluetti-power-stations-via-bluetti-cloud/160644",
+  "homeyCommunityTopicId": 160644
 }

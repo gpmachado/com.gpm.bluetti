@@ -8,6 +8,8 @@ reports (including any `Unmapped fnCode` log lines) are welcome.
 
 **Install (test version):** https://homey.app/a/com.gpm.bluetti/test/
 
+**Community topic (questions, reports for other models):** https://community.homey.app/t/app-pro-bluetti-power-stations-via-bluetti-cloud/160644
+
 See [README.txt](README.txt) for features and setup.
 
 ## How it works

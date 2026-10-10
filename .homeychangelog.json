@@ -1,4 +1,7 @@
 {
+  "0.3.1": {
+    "en": "Added link to the Homey Community topic."
+  },
   "0.3.0": {
     "en": "First public test version. Tested with BLUETTI Elite 30 V2."
   }
