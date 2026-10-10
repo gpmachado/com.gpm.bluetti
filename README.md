@@ -6,6 +6,8 @@ Not affiliated with or supported by BLUETTI.
 **Tested with: BLUETTI Elite 30 V2 only.** Other models supported by the BLUETTI cloud may work but are untested —
 reports (including any `Unmapped fnCode` log lines) are welcome.
 
+**Install (test version):** https://homey.app/a/com.gpm.bluetti/test/
+
 See [README.txt](README.txt) for features and setup.
 
 ## How it works
