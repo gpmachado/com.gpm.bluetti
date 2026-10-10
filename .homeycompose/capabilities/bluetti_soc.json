@@ -1,0 +1,13 @@
+{
+  "type": "number",
+  "title": { "en": "Battery level" },
+  "units": { "en": "%" },
+  "decimals": 0,
+  "min": 0,
+  "max": 100,
+  "getable": true,
+  "setable": false,
+  "insights": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/capabilities/discharge.svg"
+}

@@ -1,0 +1,27 @@
+{
+  "title": { "en": "Turn output on or off" },
+  "titleFormatted": { "en": "Turn [[output]] [[state]]" },
+  "args": [
+    { "type": "device", "name": "device", "filter": "driver_id=power_station" },
+    {
+      "type": "dropdown",
+      "name": "output",
+      "title": { "en": "Output" },
+      "values": [
+        { "id": "ac", "title": { "en": "AC output" } },
+        { "id": "dc", "title": { "en": "DC output" } },
+        { "id": "ac_eco", "title": { "en": "AC ECO" } },
+        { "id": "dc_eco", "title": { "en": "DC ECO" } }
+      ]
+    },
+    {
+      "type": "dropdown",
+      "name": "state",
+      "title": { "en": "State" },
+      "values": [
+        { "id": "on", "title": { "en": "on" } },
+        { "id": "off", "title": { "en": "off" } }
+      ]
+    }
+  ]
+}

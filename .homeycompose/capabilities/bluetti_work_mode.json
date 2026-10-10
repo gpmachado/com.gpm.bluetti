@@ -1,0 +1,9 @@
+{
+  "type": "string",
+  "title": { "en": "Working mode" },
+  "getable": true,
+  "setable": false,
+  "insights": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/capabilities/mode.svg"
+}

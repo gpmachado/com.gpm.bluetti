@@ -1,0 +1,44 @@
+{
+  "id": "com.gpm.bluetti",
+  "version": "0.3.0",
+  "compatibility": ">=12.0.0",
+  "sdk": 3,
+  "platforms": [
+    "local"
+  ],
+  "name": {
+    "en": "BLUETTI"
+  },
+  "description": {
+    "en": "Monitor and control your BLUETTI power station from anywhere"
+  },
+  "category": [
+    "energy"
+  ],
+  "tags": {
+    "en": [
+      "bluetti",
+      "power station",
+      "battery",
+      "elite 30 v2",
+      "solar",
+      "ups"
+    ]
+  },
+  "brandColor": "#00A2E4",
+  "permissions": [],
+  "images": {
+    "small": "/assets/images/small.png",
+    "large": "/assets/images/large.png",
+    "xlarge": "/assets/images/xlarge.png"
+  },
+  "author": {
+    "name": "Gabriel Machado",
+    "email": "machado.gp@gmail.com"
+  },
+  "source": "https://github.com/gpmachado/com.gpm.bluetti",
+  "bugs": {
+    "url": "https://github.com/gpmachado/com.gpm.bluetti/issues"
+  },
+  "homepage": "https://github.com/gpmachado/com.gpm.bluetti"
+}

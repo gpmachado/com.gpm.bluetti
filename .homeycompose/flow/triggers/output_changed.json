@@ -1,0 +1,21 @@
+{
+  "title": { "en": "An output was turned on or off" },
+  "titleFormatted": { "en": "[[output]] was turned on or off" },
+  "tokens": [
+    { "name": "state", "type": "boolean", "title": { "en": "On" }, "example": true }
+  ],
+  "args": [
+    { "type": "device", "name": "device", "filter": "driver_id=power_station" },
+    {
+      "type": "dropdown",
+      "name": "output",
+      "title": { "en": "Output" },
+      "values": [
+        { "id": "ac", "title": { "en": "AC output" } },
+        { "id": "dc", "title": { "en": "DC output" } },
+        { "id": "ac_eco", "title": { "en": "AC ECO" } },
+        { "id": "dc_eco", "title": { "en": "DC ECO" } }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "title": { "en": "Power station went offline" },
+  "args": [
+    { "type": "device", "name": "device", "filter": "driver_id=power_station" }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "errors": {
+    "auth": "Signed out of BLUETTI. Open the device settings and choose Repair to sign in again.",
+    "cloud": "Cannot reach the BLUETTI cloud: __message__",
+    "offline": "The power station is offline in the BLUETTI cloud. Check its Wi-Fi connection."
+  },
+  "work_mode": {
+    "pv_priority_ups": "PV Priority UPS",
+    "standard_ups": "Standard UPS",
+    "time_control_ups": "Time Control UPS",
+    "custom_ups": "Custom UPS"
+  }
+}

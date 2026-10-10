@@ -1,0 +1,493 @@
+{
+  "_comment": "This file is generated. Please edit .homeycompose/app.json instead.",
+  "id": "com.gpm.bluetti",
+  "version": "0.3.0",
+  "compatibility": ">=12.0.0",
+  "sdk": 3,
+  "platforms": [
+    "local"
+  ],
+  "name": {
+    "en": "BLUETTI"
+  },
+  "description": {
+    "en": "Monitor and control your BLUETTI power station from anywhere"
+  },
+  "category": [
+    "energy"
+  ],
+  "tags": {
+    "en": [
+      "bluetti",
+      "power station",
+      "battery",
+      "elite 30 v2",
+      "solar",
+      "ups"
+    ]
+  },
+  "brandColor": "#00A2E4",
+  "permissions": [],
+  "images": {
+    "small": "/assets/images/small.png",
+    "large": "/assets/images/large.png",
+    "xlarge": "/assets/images/xlarge.png"
+  },
+  "author": {
+    "name": "Gabriel Machado",
+    "email": "machado.gp@gmail.com"
+  },
+  "source": "https://github.com/gpmachado/com.gpm.bluetti",
+  "bugs": {
+    "url": "https://github.com/gpmachado/com.gpm.bluetti/issues"
+  },
+  "homepage": "https://github.com/gpmachado/com.gpm.bluetti",
+  "flow": {
+    "triggers": [
+      {
+        "title": {
+          "en": "Power station came back online"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=power_station"
+          }
+        ],
+        "id": "came_online"
+      },
+      {
+        "title": {
+          "en": "An output was turned on or off"
+        },
+        "titleFormatted": {
+          "en": "[[output]] was turned on or off"
+        },
+        "tokens": [
+          {
+            "name": "state",
+            "type": "boolean",
+            "title": {
+              "en": "On"
+            },
+            "example": true
+          }
+        ],
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=power_station"
+          },
+          {
+            "type": "dropdown",
+            "name": "output",
+            "title": {
+              "en": "Output"
+            },
+            "values": [
+              {
+                "id": "ac",
+                "title": {
+                  "en": "AC output"
+                }
+              },
+              {
+                "id": "dc",
+                "title": {
+                  "en": "DC output"
+                }
+              },
+              {
+                "id": "ac_eco",
+                "title": {
+                  "en": "AC ECO"
+                }
+              },
+              {
+                "id": "dc_eco",
+                "title": {
+                  "en": "DC ECO"
+                }
+              }
+            ]
+          }
+        ],
+        "id": "output_changed"
+      },
+      {
+        "title": {
+          "en": "Power station went offline"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=power_station"
+          }
+        ],
+        "id": "went_offline"
+      }
+    ],
+    "conditions": [
+      {
+        "title": {
+          "en": "Output is !{{on|off}}"
+        },
+        "titleFormatted": {
+          "en": "[[output]] is !{{on|off}}"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=power_station"
+          },
+          {
+            "type": "dropdown",
+            "name": "output",
+            "title": {
+              "en": "Output"
+            },
+            "values": [
+              {
+                "id": "ac",
+                "title": {
+                  "en": "AC output"
+                }
+              },
+              {
+                "id": "dc",
+                "title": {
+                  "en": "DC output"
+                }
+              },
+              {
+                "id": "ac_eco",
+                "title": {
+                  "en": "AC ECO"
+                }
+              },
+              {
+                "id": "dc_eco",
+                "title": {
+                  "en": "DC ECO"
+                }
+              }
+            ]
+          }
+        ],
+        "id": "output_is_on"
+      }
+    ],
+    "actions": [
+      {
+        "title": {
+          "en": "Turn output on or off"
+        },
+        "titleFormatted": {
+          "en": "Turn [[output]] [[state]]"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=power_station"
+          },
+          {
+            "type": "dropdown",
+            "name": "output",
+            "title": {
+              "en": "Output"
+            },
+            "values": [
+              {
+                "id": "ac",
+                "title": {
+                  "en": "AC output"
+                }
+              },
+              {
+                "id": "dc",
+                "title": {
+                  "en": "DC output"
+                }
+              },
+              {
+                "id": "ac_eco",
+                "title": {
+                  "en": "AC ECO"
+                }
+              },
+              {
+                "id": "dc_eco",
+                "title": {
+                  "en": "DC ECO"
+                }
+              }
+            ]
+          },
+          {
+            "type": "dropdown",
+            "name": "state",
+            "title": {
+              "en": "State"
+            },
+            "values": [
+              {
+                "id": "on",
+                "title": {
+                  "en": "on"
+                }
+              },
+              {
+                "id": "off",
+                "title": {
+                  "en": "off"
+                }
+              }
+            ]
+          }
+        ],
+        "id": "set_output"
+      }
+    ]
+  },
+  "drivers": [
+    {
+      "name": {
+        "en": "Power Station"
+      },
+      "class": "battery",
+      "capabilities": [
+        "measure_battery",
+        "bluetti_soc",
+        "measure_power",
+        "measure_power.pv_in",
+        "measure_power.grid_in",
+        "measure_power.ac_out",
+        "measure_power.dc_out",
+        "bluetti_time_to_empty",
+        "bluetti_time_to_full",
+        "bluetti_discharge_time",
+        "bluetti_charge_time",
+        "onoff.ac",
+        "onoff.dc",
+        "onoff.ac_eco",
+        "onoff.dc_eco",
+        "bluetti_work_mode"
+      ],
+      "capabilitiesOptions": {
+        "measure_power": {
+          "title": {
+            "en": "Battery power"
+          },
+          "insightsTitleTrue": {
+            "en": "Battery power"
+          }
+        },
+        "measure_power.pv_in": {
+          "title": {
+            "en": "Solar input"
+          }
+        },
+        "measure_power.grid_in": {
+          "title": {
+            "en": "Grid input"
+          }
+        },
+        "measure_power.ac_out": {
+          "title": {
+            "en": "AC output"
+          }
+        },
+        "measure_power.dc_out": {
+          "title": {
+            "en": "DC output"
+          }
+        },
+        "onoff.ac": {
+          "title": {
+            "en": "AC output"
+          },
+          "uiComponent": "button"
+        },
+        "onoff.dc": {
+          "title": {
+            "en": "DC output"
+          },
+          "uiComponent": "button"
+        },
+        "onoff.ac_eco": {
+          "title": {
+            "en": "AC ECO"
+          },
+          "uiComponent": "button"
+        },
+        "onoff.dc_eco": {
+          "title": {
+            "en": "DC ECO"
+          },
+          "uiComponent": "button"
+        }
+      },
+      "energy": {
+        "batteries": [
+          "INTERNAL"
+        ]
+      },
+      "platforms": [
+        "local"
+      ],
+      "connectivity": [
+        "cloud"
+      ],
+      "images": {
+        "small": "/drivers/power_station/assets/images/small.png",
+        "large": "/drivers/power_station/assets/images/large.png",
+        "xlarge": "/drivers/power_station/assets/images/xlarge.png"
+      },
+      "pair": [
+        {
+          "id": "login_oauth2",
+          "template": "login_oauth2"
+        },
+        {
+          "id": "list_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_devices"
+          }
+        },
+        {
+          "id": "add_devices",
+          "template": "add_devices"
+        }
+      ],
+      "repair": [
+        {
+          "id": "login_oauth2",
+          "template": "login_oauth2"
+        }
+      ],
+      "id": "power_station",
+      "settings": [
+        {
+          "id": "poll_interval",
+          "type": "number",
+          "label": {
+            "en": "Update interval"
+          },
+          "hint": {
+            "en": "Fallback polling interval. Changes are normally pushed instantly by the BLUETTI cloud; polling also refreshes power readings."
+          },
+          "value": 30,
+          "min": 15,
+          "max": 600,
+          "units": {
+            "en": "seconds"
+          }
+        },
+        {
+          "id": "sn",
+          "type": "label",
+          "label": {
+            "en": "Serial number"
+          },
+          "value": ""
+        },
+        {
+          "id": "model",
+          "type": "label",
+          "label": {
+            "en": "Model"
+          },
+          "value": ""
+        }
+      ]
+    }
+  ],
+  "capabilities": {
+    "bluetti_charge_time": {
+      "type": "number",
+      "title": {
+        "en": "Time to full (minutes)"
+      },
+      "units": {
+        "en": "min"
+      },
+      "decimals": 0,
+      "getable": true,
+      "setable": false,
+      "insights": true,
+      "uiComponent": null,
+      "icon": "/assets/capabilities/charge.svg"
+    },
+    "bluetti_discharge_time": {
+      "type": "number",
+      "title": {
+        "en": "Time to empty (minutes)"
+      },
+      "units": {
+        "en": "min"
+      },
+      "decimals": 0,
+      "getable": true,
+      "setable": false,
+      "insights": true,
+      "uiComponent": null,
+      "icon": "/assets/capabilities/discharge.svg"
+    },
+    "bluetti_soc": {
+      "type": "number",
+      "title": {
+        "en": "Battery level"
+      },
+      "units": {
+        "en": "%"
+      },
+      "decimals": 0,
+      "min": 0,
+      "max": 100,
+      "getable": true,
+      "setable": false,
+      "insights": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/capabilities/discharge.svg"
+    },
+    "bluetti_time_to_empty": {
+      "type": "string",
+      "title": {
+        "en": "Time to empty"
+      },
+      "getable": true,
+      "setable": false,
+      "insights": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/capabilities/discharge.svg"
+    },
+    "bluetti_time_to_full": {
+      "type": "string",
+      "title": {
+        "en": "Time to full"
+      },
+      "getable": true,
+      "setable": false,
+      "insights": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/capabilities/charge.svg"
+    },
+    "bluetti_work_mode": {
+      "type": "string",
+      "title": {
+        "en": "Working mode"
+      },
+      "getable": true,
+      "setable": false,
+      "insights": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/capabilities/mode.svg"
+    }
+  }
+}

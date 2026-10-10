@@ -1,0 +1,15 @@
+{
+  "type": "number",
+  "title": {
+    "en": "Time to full (minutes)"
+  },
+  "units": {
+    "en": "min"
+  },
+  "decimals": 0,
+  "getable": true,
+  "setable": false,
+  "insights": true,
+  "uiComponent": null,
+  "icon": "/assets/capabilities/charge.svg"
+}

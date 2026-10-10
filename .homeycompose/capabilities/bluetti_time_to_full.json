@@ -1,0 +1,9 @@
+{
+  "type": "string",
+  "title": { "en": "Time to full" },
+  "getable": true,
+  "setable": false,
+  "insights": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/capabilities/charge.svg"
+}

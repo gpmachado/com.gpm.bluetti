@@ -1,0 +1,117 @@
+{
+  "name": {
+    "en": "Power Station"
+  },
+  "class": "battery",
+  "capabilities": [
+    "measure_battery",
+    "bluetti_soc",
+    "measure_power",
+    "measure_power.pv_in",
+    "measure_power.grid_in",
+    "measure_power.ac_out",
+    "measure_power.dc_out",
+    "bluetti_time_to_empty",
+    "bluetti_time_to_full",
+    "bluetti_discharge_time",
+    "bluetti_charge_time",
+    "onoff.ac",
+    "onoff.dc",
+    "onoff.ac_eco",
+    "onoff.dc_eco",
+    "bluetti_work_mode"
+  ],
+  "capabilitiesOptions": {
+    "measure_power": {
+      "title": {
+        "en": "Battery power"
+      },
+      "insightsTitleTrue": {
+        "en": "Battery power"
+      }
+    },
+    "measure_power.pv_in": {
+      "title": {
+        "en": "Solar input"
+      }
+    },
+    "measure_power.grid_in": {
+      "title": {
+        "en": "Grid input"
+      }
+    },
+    "measure_power.ac_out": {
+      "title": {
+        "en": "AC output"
+      }
+    },
+    "measure_power.dc_out": {
+      "title": {
+        "en": "DC output"
+      }
+    },
+    "onoff.ac": {
+      "title": {
+        "en": "AC output"
+      },
+      "uiComponent": "button"
+    },
+    "onoff.dc": {
+      "title": {
+        "en": "DC output"
+      },
+      "uiComponent": "button"
+    },
+    "onoff.ac_eco": {
+      "title": {
+        "en": "AC ECO"
+      },
+      "uiComponent": "button"
+    },
+    "onoff.dc_eco": {
+      "title": {
+        "en": "DC ECO"
+      },
+      "uiComponent": "button"
+    }
+  },
+  "energy": {
+    "batteries": [
+      "INTERNAL"
+    ]
+  },
+  "platforms": [
+    "local"
+  ],
+  "connectivity": [
+    "cloud"
+  ],
+  "images": {
+    "small": "{{driverAssetsPath}}/images/small.png",
+    "large": "{{driverAssetsPath}}/images/large.png",
+    "xlarge": "{{driverAssetsPath}}/images/xlarge.png"
+  },
+  "pair": [
+    {
+      "id": "login_oauth2",
+      "template": "login_oauth2"
+    },
+    {
+      "id": "list_devices",
+      "template": "list_devices",
+      "navigation": {
+        "next": "add_devices"
+      }
+    },
+    {
+      "id": "add_devices",
+      "template": "add_devices"
+    }
+  ],
+  "repair": [
+    {
+      "id": "login_oauth2",
+      "template": "login_oauth2"
+    }
+  ]
+}
