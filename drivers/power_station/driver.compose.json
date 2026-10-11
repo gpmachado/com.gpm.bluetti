@@ -84,7 +84,8 @@
     "local"
   ],
   "connectivity": [
-    "cloud"
+    "cloud",
+    "ble"
   ],
   "images": {
     "small": "{{driverAssetsPath}}/images/small.png",

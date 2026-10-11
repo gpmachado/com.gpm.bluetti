@@ -1,4 +1,7 @@
 {
+  "0.4.0": {
+    "en": "New: Bluetooth fallback. When Wi-Fi or the BLUETTI cloud is down, battery level, power and time remaining are read over Bluetooth (enable it in the device settings). Tested with Elite 30 V2."
+  },
   "0.3.3": {
     "en": "Recovers automatically when the power station is removed and re-added in the BLUETTI app. Real-time connection no longer reconnects every few minutes."
   },

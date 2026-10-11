@@ -28,3 +28,6 @@ MIT License
 Copyright (c) 2025 Bluetti
 
 Portions are derived from Percy2Live/ioBroker.bluetti (MIT License).
+
+Portions of lib/ble are derived from Patrick762/bluetti-bt-lib, nhurman/bluetti_mqtt,
+warhammerkid/bluetti_mqtt and Garfonso/ioBroker.bluetti-ble (all MIT License).

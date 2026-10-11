@@ -13,6 +13,7 @@ What you get
 - Working mode (Standard UPS, PV Priority UPS, Time Control UPS, Custom UPS)
 - AC output, DC output, AC ECO and DC ECO on/off, from the device and from Flows
 - Real-time updates: changes made on the power station or in the BLUETTI app show up in Homey within seconds
+- Bluetooth fallback (optional): when Wi-Fi or the BLUETTI cloud is down, Homey reads battery level, power and time remaining directly over Bluetooth. Homey must be within Bluetooth range. Turn it on in the device settings.
 
 Flow cards
 - When: an output was turned on or off; the power station went offline; came back online
@@ -22,7 +23,7 @@ Flow cards
 Requirements
 - The power station must already be set up and connected to Wi-Fi with the BLUETTI mobile app.
 - A BLUETTI account (the same one you use in the BLUETTI app).
-- Internet access: BLUETTI power stations do not offer a local network connection, so Homey talks to them through the BLUETTI cloud.
+- Internet access: BLUETTI power stations do not offer a local network connection, so Homey talks to them through the BLUETTI cloud. With the Bluetooth fallback on, monitoring keeps working without internet.
 
 Setup
 Add a device, choose BLUETTI > Power Station, sign in with your BLUETTI account and select your power station.

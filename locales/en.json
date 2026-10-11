@@ -9,5 +9,11 @@
     "standard_ups": "Standard UPS",
     "time_control_ups": "Time Control UPS",
     "custom_ups": "Custom UPS"
+  },
+  "ble": {
+    "warning": "Cloud unavailable – reading over Bluetooth (outputs and working mode not updated)",
+    "not_found": "Power station not found over Bluetooth. Is Homey within range?",
+    "status_ok": "OK at __time__ – battery __soc__%, signal __rssi__ dBm",
+    "status_error": "Failed: __message__"
   }
 }

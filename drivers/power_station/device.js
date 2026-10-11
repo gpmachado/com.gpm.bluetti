@@ -2,6 +2,7 @@
 
 const Homey = require('homey');
 const { BluettiAuthError } = require('../../lib/BluettiCloud');
+const { BluettiBleReader } = require('../../lib/ble/BluettiBleReader');
 
 // fnCode (BLUETTI cloud) → numeric capability. Verified on Elite 30 V2.
 const NUMERIC_MAP = {
@@ -39,6 +40,8 @@ const MAX_FAILURES = 3;
 const POST_COMMAND_POLL_MS = 4000;
 // Minimum time between automatic re-bind attempts.
 const REBIND_INTERVAL_MS = 10 * 60000;
+// Bluetooth fallback: never read more often than this (each read is a full connect + handshake).
+const BLE_MIN_INTERVAL_MS = 60000;
 // Coalesce bursts of real-time notifications into one read.
 const NOTIFY_DEBOUNCE_MS = 1500;
 
@@ -111,11 +114,11 @@ class PowerStationDevice extends Homey.Device {
     } catch (err) {
       if (err instanceof BluettiAuthError) {
         this.error('Auth error:', err.message);
-        await this.setUnavailable(this.homey.__('errors.auth')).catch(this.error);
+        if (!(await this._bleFallback())) await this.setUnavailable(this.homey.__('errors.auth')).catch(this.error);
       } else {
         this._failures += 1;
         this.error(`Poll failed (${this._failures}/${MAX_FAILURES}):`, err.message);
-        if (this._failures >= MAX_FAILURES) {
+        if (this._failures >= MAX_FAILURES && !(await this._bleFallback())) {
           await this.setUnavailable(this.homey.__('errors.cloud', { message: err.message })).catch(this.error);
         }
       }
@@ -155,8 +158,14 @@ class PowerStationDevice extends Homey.Device {
       }
     }
     if (!online) {
+      if (await this._bleFallback()) return;
       await this.setUnavailable(this.homey.__('errors.offline')).catch(this.error);
       return;
+    }
+    if (this._viaBle) {
+      this._viaBle = false;
+      this.log('Cloud is back, leaving Bluetooth fallback');
+      await this.unsetWarning().catch(this.error);
     }
     await this.setAvailable().catch(this.error);
 
@@ -241,6 +250,72 @@ class PowerStationDevice extends Homey.Device {
     }, NOTIFY_DEBOUNCE_MS);
   }
 
+  // ── Bluetooth fallback ─────────────────────────────────────────────────────
+
+  get ble() {
+    if (!this._ble) this._ble = new BluettiBleReader({ homey: this.homey, log: (...a) => this.log(...a) });
+    return this._ble;
+  }
+
+  // Cloud unusable: read over Bluetooth instead. Returns true when values are current.
+  async _bleFallback() {
+    if (!this.getSetting('ble_fallback')) return false;
+    if (this._bleLastOk && Date.now() - this._bleLastOk < BLE_MIN_INTERVAL_MS) return true;
+    try {
+      await this._bleRead();
+      if (!this._viaBle) {
+        this._viaBle = true;
+        this.log('Cloud unavailable, using Bluetooth fallback');
+      }
+      await this.setAvailable().catch(this.error);
+      await this.setWarning(this.homey.__('ble.warning')).catch(this.error);
+      return true;
+    } catch (err) {
+      this.error('Bluetooth read failed:', err.message);
+      return false;
+    }
+  }
+
+  async _bleRead() {
+    if (this._bleBusy) return this._bleBusy;
+    this._bleBusy = (async () => {
+      const started = Date.now();
+      const ad = await this.ble.findAdvertisement({ peripheralUuid: this.getStoreValue('ble_uuid'), serial: this.sn });
+      if (!ad) throw new Error(this.homey.__('ble.not_found'));
+      if (ad.uuid && ad.uuid !== this.getStoreValue('ble_uuid')) await this.setStoreValue('ble_uuid', ad.uuid).catch(this.error);
+
+      const { values, rssi } = await this.ble.read(ad);
+      this._bleLastOk = Date.now();
+      this.log(`Bluetooth read in ${Date.now() - started} ms (RSSI ${rssi}):`, JSON.stringify(values));
+      await this._applyBleValues(values);
+      const time = new Date().toLocaleTimeString('en-GB', { timeZone: this.homey.clock.getTimezone() });
+      await this.setSettings({
+        ble_status: this.homey.__('ble.status_ok', { time, soc: values.soc, rssi }),
+      }).catch(this.error);
+      return values;
+    })().finally(() => {
+      this._bleBusy = null;
+    });
+    return this._bleBusy;
+  }
+
+  async _applyBleValues(v) {
+    if (v.soc <= 100) {
+      await this._set('measure_battery', v.soc);
+      await this._set('bluetti_soc', v.soc);
+    }
+    await this._set('measure_power.pv_in', v.dc_input_power);
+    await this._set('measure_power.grid_in', v.ac_input_power);
+    await this._set('measure_power.ac_out', v.ac_output_power);
+    await this._set('measure_power.dc_out', v.dc_output_power);
+    const net = v.dc_input_power + v.ac_input_power - v.ac_output_power - v.dc_output_power;
+    await this._set('measure_power', net);
+    // One "time remaining" register: towards empty when discharging, towards full when charging.
+    const remaining = formatMinutes(v.time_remaining_min);
+    await this._set('bluetti_time_to_empty', net < 0 ? remaining : '–');
+    await this._set('bluetti_time_to_full', net > 0 ? remaining : '–');
+  }
+
   // ── Control ────────────────────────────────────────────────────────────────
 
   async setOutput(output, on) {
@@ -260,8 +335,23 @@ class PowerStationDevice extends Homey.Device {
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────
 
-  async onSettings({ changedKeys }) {
+  async onSettings({ newSettings, changedKeys }) {
     if (changedKeys.includes('poll_interval')) this.restartPolling(1000);
+    if (changedKeys.includes('ble_fallback')) {
+      if (newSettings.ble_fallback) {
+        // Test right away so the user sees whether Bluetooth works, without waiting for an outage.
+        this.homey.setTimeout(() => {
+          this._bleRead().catch(async (err) => {
+            this.error('Bluetooth test failed:', err.message);
+            await this.setSettings({ ble_status: this.homey.__('ble.status_error', { message: err.message }) }).catch(this.error);
+          });
+        }, 500);
+      } else if (this._viaBle) {
+        this._viaBle = false;
+        await this.unsetWarning().catch(this.error);
+        this.restartPolling(1000);
+      }
+    }
   }
 
   _stop() {

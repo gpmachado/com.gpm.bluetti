@@ -2,23 +2,60 @@
   {
     "id": "poll_interval",
     "type": "number",
-    "label": { "en": "Update interval" },
-    "hint": { "en": "Fallback polling interval. Changes are normally pushed instantly by the BLUETTI cloud; polling also refreshes power readings." },
+    "label": {
+      "en": "Update interval"
+    },
+    "hint": {
+      "en": "Fallback polling interval. Changes are normally pushed instantly by the BLUETTI cloud; polling also refreshes power readings."
+    },
     "value": 30,
     "min": 15,
     "max": 600,
-    "units": { "en": "seconds" }
+    "units": {
+      "en": "seconds"
+    }
+  },
+  {
+    "type": "group",
+    "label": {
+      "en": "Bluetooth fallback"
+    },
+    "children": [
+      {
+        "id": "ble_fallback",
+        "type": "checkbox",
+        "value": false,
+        "label": {
+          "en": "Read over Bluetooth when the cloud is unavailable"
+        },
+        "hint": {
+          "en": "When Wi-Fi or the BLUETTI cloud is down, Homey reads battery level, power and time remaining directly from the power station over Bluetooth (read only). Homey must be within Bluetooth range. Turning this on runs a test read right away. Tested with Elite 30 V2."
+        }
+      },
+      {
+        "id": "ble_status",
+        "type": "label",
+        "label": {
+          "en": "Last Bluetooth read"
+        },
+        "value": "–"
+      }
+    ]
   },
   {
     "id": "sn",
     "type": "label",
-    "label": { "en": "Serial number" },
+    "label": {
+      "en": "Serial number"
+    },
     "value": ""
   },
   {
     "id": "model",
     "type": "label",
-    "label": { "en": "Model" },
+    "label": {
+      "en": "Model"
+    },
     "value": ""
   }
 ]
