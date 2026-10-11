@@ -1,6 +1,6 @@
 {
   "name": "com.gpm.bluetti",
-  "version": "0.3.4",
+  "version": "0.3.3",
   "main": "app.js",
   "license": "MIT",
   "engines": {
