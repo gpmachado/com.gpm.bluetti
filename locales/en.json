@@ -15,5 +15,6 @@
     "not_found": "Power station not found over Bluetooth. Is Homey within range?",
     "status_ok": "OK at __time__ – battery __soc__%, signal __rssi__ dBm",
     "status_error": "Failed: __message__"
-  }
+  },
+  "full": "Full"
 }

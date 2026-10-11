@@ -1,0 +1,11 @@
+{
+  "type": "number",
+  "title": { "en": "Backup time (minutes)" },
+  "units": { "en": "min" },
+  "decimals": 0,
+  "getable": true,
+  "setable": false,
+  "insights": true,
+  "uiComponent": null,
+  "icon": "/assets/capabilities/discharge.svg"
+}

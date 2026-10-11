@@ -33,6 +33,16 @@ const WORK_MODES = {
 
 const KNOWN_CODES = new Set([...Object.keys(NUMERIC_MAP), ...Object.values(SWITCH_MAP), 'SetCtrlWorkMode']);
 
+// Usable battery capacity per model (Wh), for the "Backup time" estimate.
+// Only models whose capacity is certain; others simply do not get the capability.
+const CAPACITY_WH = {
+  EL30V2: 288,
+};
+// Inverter + conversion efficiency when running the loads from the battery.
+const BACKUP_EFFICIENCY = 0.9;
+// Below this load the estimate is meaningless (and would be days long).
+const BACKUP_MIN_LOAD_W = 5;
+
 // Consecutive cloud failures before the device is shown as unavailable.
 const MAX_FAILURES = 3;
 // Delay before re-reading after a command, so the cloud has the new state.
@@ -60,6 +70,11 @@ class PowerStationDevice extends Homey.Device {
     for (const capability of ['bluetti_soc', 'bluetti_time_to_empty', 'bluetti_time_to_full']) {
       if (!this.hasCapability(capability)) await this.addCapability(capability).catch(this.error);
     }
+    // Backup time only where the battery capacity is known.
+    for (const capability of ['bluetti_backup_time', 'bluetti_backup_minutes']) {
+      if (this.capacityWh && !this.hasCapability(capability)) await this.addCapability(capability).catch(this.error);
+      if (!this.capacityWh && this.hasCapability(capability)) await this.removeCapability(capability).catch(this.error);
+    }
 
     for (const output of Object.keys(SWITCH_MAP)) {
       this.registerCapabilityListener(`onoff.${output}`, async (value) => this.setOutput(output, value));
@@ -83,6 +98,32 @@ class PowerStationDevice extends Homey.Device {
 
   get cloud() {
     return this.homey.app.cloud;
+  }
+
+  get capacityWh() {
+    const model = String(this.getSetting('model') || this.getStoreValue('model') || '').toUpperCase();
+    if (CAPACITY_WH[model]) return CAPACITY_WH[model];
+    // The serial starts with the model, e.g. "EL30V22622110380002".
+    const byPrefix = Object.keys(CAPACITY_WH).find((m) => String(this.sn).toUpperCase().startsWith(m));
+    return byPrefix ? CAPACITY_WH[byPrefix] : null;
+  }
+
+  // How long the current loads would run from the battery if the grid failed now.
+  // While actually running on battery, BLUETTI's own estimate is used (it is accurate then).
+  async _updateBackup({ soc, load, onBattery, bluettiMinutes }) {
+    if (!this.hasCapability('bluetti_backup_time') || soc === null || load === null) return;
+    let minutes = null;
+    if (onBattery && bluettiMinutes > 0) {
+      minutes = bluettiMinutes;
+    } else if (load >= BACKUP_MIN_LOAD_W) {
+      minutes = Math.round(((soc / 100) * this.capacityWh * BACKUP_EFFICIENCY / load) * 60);
+    }
+    await this._set('bluetti_backup_time', minutes === null ? '–' : formatMinutes(minutes));
+    if (minutes !== null) await this._set('bluetti_backup_minutes', minutes);
+  }
+
+  _fullLabel(soc, minutes) {
+    return soc !== null && soc >= 100 && !(minutes > 0) ? this.homey.__('full') : formatMinutes(minutes);
   }
 
   // ── Polling ────────────────────────────────────────────────────────────────
@@ -200,7 +241,7 @@ class PowerStationDevice extends Homey.Device {
     const dsg = toNumber(states.DsgFullTime);
     if (dsg !== null) await this._set('bluetti_time_to_empty', formatMinutes(dsg));
     const chg = toNumber(states.ChgFullTime);
-    if (chg !== null) await this._set('bluetti_time_to_full', formatMinutes(chg));
+    if (chg !== null) await this._set('bluetti_time_to_full', this._fullLabel(soc, chg));
 
     const pvIn = toNumber(states.PVAllTotalPower);
     const gridIn = toNumber(states.GridAllTotalPower);
@@ -208,7 +249,11 @@ class PowerStationDevice extends Homey.Device {
     const dcOut = toNumber(states.DCLoadAllTotalPower);
     if ([pvIn, gridIn, acOut, dcOut].some((v) => v !== null)) {
       // Positive = battery charging, negative = discharging (conversion losses ignored).
-      await this._set('measure_power', (pvIn || 0) + (gridIn || 0) - (acOut || 0) - (dcOut || 0));
+      const net = (pvIn || 0) + (gridIn || 0) - (acOut || 0) - (dcOut || 0);
+      await this._set('measure_power', net);
+      await this._updateBackup({
+        soc, load: (acOut || 0) + (dcOut || 0), onBattery: net < 0, bluettiMinutes: dsg,
+      });
     }
 
     for (const [output, fnCode] of Object.entries(SWITCH_MAP)) {
@@ -315,7 +360,13 @@ class PowerStationDevice extends Homey.Device {
     // One "time remaining" register: towards empty when discharging, towards full when charging.
     const remaining = formatMinutes(v.time_remaining_min);
     await this._set('bluetti_time_to_empty', net < 0 ? remaining : '–');
-    await this._set('bluetti_time_to_full', net > 0 ? remaining : '–');
+    await this._set('bluetti_time_to_full', net > 0 ? remaining : this._fullLabel(v.soc, 0));
+    await this._updateBackup({
+      soc: v.soc <= 100 ? v.soc : null,
+      load: v.ac_output_power + v.dc_output_power,
+      onBattery: net < 0,
+      bluettiMinutes: v.time_remaining_min,
+    });
   }
 
   // ── Control ────────────────────────────────────────────────────────────────

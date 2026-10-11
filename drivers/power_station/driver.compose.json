@@ -13,6 +13,8 @@
     "measure_power.dc_out",
     "bluetti_time_to_empty",
     "bluetti_time_to_full",
+    "bluetti_backup_time",
+    "bluetti_backup_minutes",
     "bluetti_discharge_time",
     "bluetti_charge_time",
     "onoff.ac",

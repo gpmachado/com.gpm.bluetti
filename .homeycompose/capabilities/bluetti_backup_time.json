@@ -1,0 +1,9 @@
+{
+  "type": "string",
+  "title": { "en": "Backup time" },
+  "getable": true,
+  "setable": false,
+  "insights": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/capabilities/discharge.svg"
+}

@@ -274,6 +274,8 @@
         "measure_power.dc_out",
         "bluetti_time_to_empty",
         "bluetti_time_to_full",
+        "bluetti_backup_time",
+        "bluetti_backup_minutes",
         "bluetti_discharge_time",
         "bluetti_charge_time",
         "onoff.ac",
@@ -441,6 +443,32 @@
     }
   ],
   "capabilities": {
+    "bluetti_backup_minutes": {
+      "type": "number",
+      "title": {
+        "en": "Backup time (minutes)"
+      },
+      "units": {
+        "en": "min"
+      },
+      "decimals": 0,
+      "getable": true,
+      "setable": false,
+      "insights": true,
+      "uiComponent": null,
+      "icon": "/assets/capabilities/discharge.svg"
+    },
+    "bluetti_backup_time": {
+      "type": "string",
+      "title": {
+        "en": "Backup time"
+      },
+      "getable": true,
+      "setable": false,
+      "insights": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/capabilities/discharge.svg"
+    },
     "bluetti_charge_time": {
       "type": "number",
       "title": {

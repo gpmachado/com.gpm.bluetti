@@ -10,6 +10,7 @@ What you get
 - Solar input, grid input, AC output and DC output power
 - Battery power (positive = charging, negative = discharging)
 - Time to empty and time to full (e.g. "1d 9h 6m")
+- Backup time (Elite 30 V2): how long your current loads would run on battery if the grid failed now. In UPS mode the BLUETTI "time to empty" assumes almost no battery use, so this estimate is the useful number for a UPS
 - Working mode (Standard UPS, PV Priority UPS, Time Control UPS, Custom UPS)
 - AC output, DC output, AC ECO and DC ECO on/off, from the device and from Flows
 - Real-time updates: changes made on the power station or in the BLUETTI app show up in Homey within seconds
