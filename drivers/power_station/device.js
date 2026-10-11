@@ -50,8 +50,11 @@ const POST_COMMAND_POLL_MS = 4000;
 const REBIND_INTERVAL_MS = 10 * 60000;
 // Bluetooth fallback: never read more often than this (each read is a full connect + handshake).
 const BLE_MIN_INTERVAL_MS = 60000;
-// How long the last Bluetooth values stay acceptable when a read fails.
-const BLE_STALE_MS = 3 * BLE_MIN_INTERVAL_MS;
+// How long the last Bluetooth values stay acceptable when reads fail.
+const BLE_STALE_MS = 10 * 60000;
+// After a refused connection (usually the BLUETTI phone app using the single BLE link, e.g. to set
+// up Wi-Fi again), leave Bluetooth alone for a while so the phone can finish.
+const BLE_BACKOFF_MS = 3 * 60000;
 // Coalesce bursts of real-time notifications into one read.
 const NOTIFY_DEBOUNCE_MS = 1500;
 // Safety-net polling while the real-time link is connected.
@@ -372,7 +375,9 @@ class PowerStationDevice extends Homey.Device {
   // Cloud unusable: read over Bluetooth instead. Returns true when values are current.
   async _bleFallback(warningKey = 'ble.warning') {
     if (!this.getSetting('ble_fallback')) return false;
+    const recentOk = () => Boolean(this._viaBle && this._bleLastOk && Date.now() - this._bleLastOk < BLE_STALE_MS);
     if (this._bleLastOk && Date.now() - this._bleLastOk < BLE_MIN_INTERVAL_MS) return true;
+    if (Date.now() < (this._bleBackoffUntil || 0)) return recentOk();
     try {
       await this._bleRead();
       if (!this._viaBle) {
@@ -386,8 +391,11 @@ class PowerStationDevice extends Homey.Device {
       this._stats.bleFails += 1;
       this._noteError(err);
       this.error('Bluetooth read failed:', err.message);
-      // Ride out a single miss: keep the last Bluetooth values while they are recent.
-      return Boolean(this._viaBle && this._bleLastOk && Date.now() - this._bleLastOk < BLE_STALE_MS);
+      // Refused or not advertising: most likely a phone holds the link. Back off and keep the
+      // last Bluetooth values on screen while they are recent.
+      this._bleBackoffUntil = Date.now() + BLE_BACKOFF_MS;
+      this.log(`Bluetooth paused for ${BLE_BACKOFF_MS / 60000} min`);
+      return recentOk();
     }
   }
 
@@ -417,14 +425,14 @@ class PowerStationDevice extends Homey.Device {
         result = await this.ble.read(ad);
       }
       this._bleAd = ad;
-      const { values, rssi } = result;
+      const { values } = result;
       this._bleLastOk = Date.now();
       this._stats.bleReads += 1;
-      this.log(`Bluetooth read in ${Date.now() - started} ms (RSSI ${rssi}):`, JSON.stringify(values));
+      this.log(`Bluetooth read in ${Date.now() - started} ms:`, JSON.stringify(values));
       await this._applyBleValues(values);
       const time = new Date().toLocaleTimeString('en-GB', { timeZone: this.homey.clock.getTimezone() });
       await this.setSettings({
-        ble_status: this.homey.__('ble.status_ok', { time, soc: values.soc, rssi }),
+        ble_status: this.homey.__('ble.status_ok', { time, soc: values.soc }),
       }).catch(this.error);
       return values;
     })().finally(() => {
