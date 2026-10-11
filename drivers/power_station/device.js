@@ -55,6 +55,8 @@ const BLE_STALE_MS = 10 * 60000;
 // After a refused connection (usually the BLUETTI phone app using the single BLE link, e.g. to set
 // up Wi-Fi again), leave Bluetooth alone for a while so the phone can finish.
 const BLE_BACKOFF_MS = 3 * 60000;
+// Wait after the cloud reports the unit back online before trusting its values.
+const RECONNECT_SETTLE_MS = 10000;
 // Coalesce bursts of real-time notifications into one read.
 const NOTIFY_DEBOUNCE_MS = 1500;
 // Safety-net polling while the real-time link is connected.
@@ -282,6 +284,13 @@ class PowerStationDevice extends Homey.Device {
         card.trigger(this).catch(this.error);
         if (online) this._notify('timeline.online');
         else this._notify(this.getSetting('ble_fallback') ? 'timeline.offline_ble' : 'timeline.offline');
+      }
+      if (online && previous === false) {
+        // The first payload after reconnecting is half-filled (offline defaults such as working
+        // mode 3 and 0 W). Keep the current values and read again once the unit has reported.
+        this.log('Back online: waiting for the first full report');
+        this.restartPolling(RECONNECT_SETTLE_MS);
+        return;
       }
     }
     if (!online) {
