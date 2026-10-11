@@ -23,8 +23,8 @@ const SWITCH_MAP = {
   dc_eco: 'SetDCECO',
 };
 
-// SetCtrlWorkMode values, named as in the BLUETTI app. workmode_0 and workmode_1 confirmed on EL30V2;
-// 2 and 3 follow the order of the app and the official HA integration (oak_device_gen2.py).
+// SetCtrlWorkMode values, named as in the BLUETTI app. workmode_0, 1 and 3 confirmed on EL30V2;
+// workmode_2 follows the app order and the official HA integration (oak_device_gen2.py).
 const WORK_MODES = {
   workmode_0: 'pv_priority_ups',
   workmode_1: 'standard_ups',
