@@ -37,6 +37,8 @@ const KNOWN_CODES = new Set([...Object.keys(NUMERIC_MAP), ...Object.values(SWITC
 const MAX_FAILURES = 3;
 // Delay before re-reading after a command, so the cloud has the new state.
 const POST_COMMAND_POLL_MS = 4000;
+// Minimum time between automatic re-bind attempts.
+const REBIND_INTERVAL_MS = 10 * 60000;
 // Coalesce bursts of real-time notifications into one read.
 const NOTIFY_DEBOUNCE_MS = 1500;
 
@@ -98,8 +100,11 @@ class PowerStationDevice extends Homey.Device {
     if (this._polling) return;
     this._polling = true;
     try {
-      const list = await this.cloud.getDeviceStates([this.sn]);
-      const product = list.find((p) => String(p.sn) === String(this.sn)) || list[0];
+      let product = await this._fetchProduct();
+      if (!product || String(product.isBindByCurUser) === '0') {
+        // Removing and re-adding the unit in the BLUETTI app drops the integration binding.
+        if (await this._rebind()) product = await this._fetchProduct();
+      }
       if (!product) throw new Error('Power station not returned by the BLUETTI cloud');
       this._failures = 0;
       await this._applyProduct(product);
@@ -116,6 +121,26 @@ class PowerStationDevice extends Homey.Device {
       }
     } finally {
       this._polling = false;
+    }
+  }
+
+  async _fetchProduct() {
+    const list = await this.cloud.getDeviceStates([this.sn]);
+    return list.find((p) => String(p.sn) === String(this.sn)) || null;
+  }
+
+  // Binds this serial to the integration again; at most once per REBIND_INTERVAL_MS.
+  async _rebind() {
+    if (Date.now() - (this._lastRebind || 0) < REBIND_INTERVAL_MS) return false;
+    this._lastRebind = Date.now();
+    try {
+      this.log('Power station not bound to this integration, binding again');
+      await this.cloud.bindDevices([this.sn]);
+      await this.setStoreValue('bound', true).catch(this.error);
+      return true;
+    } catch (err) {
+      this.error('bindDevices failed:', err.message);
+      return false;
     }
   }
 
