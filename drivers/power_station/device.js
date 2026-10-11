@@ -34,8 +34,8 @@ const WORK_MODES = {
 
 const KNOWN_CODES = new Set([...Object.keys(NUMERIC_MAP), ...Object.values(SWITCH_MAP), 'SetCtrlWorkMode']);
 
-// Usable battery capacity per model (Wh), for the "Backup time" estimate.
-// Only models whose capacity is certain; others simply do not get the capability.
+// Default battery capacity per model (Wh), for the "Backup time" estimate. Users of other
+// models (or with expansion batteries) enter their capacity in the device settings.
 const CAPACITY_WH = {
   EL30V2: 288,
 };
@@ -75,11 +75,11 @@ class PowerStationDevice extends Homey.Device {
     for (const capability of ['bluetti_soc', 'bluetti_time_to_empty', 'bluetti_time_to_full']) {
       if (!this.hasCapability(capability)) await this.addCapability(capability).catch(this.error);
     }
-    // Backup time only where the battery capacity is known.
-    for (const capability of ['bluetti_backup_time', 'bluetti_backup_minutes']) {
-      if (this.capacityWh && !this.hasCapability(capability)) await this.addCapability(capability).catch(this.error);
-      if (!this.capacityWh && this.hasCapability(capability)) await this.removeCapability(capability).catch(this.error);
+    // Pre-fill the capacity for known models; 0 means unknown.
+    if (!Number(this.getSetting('capacity_wh')) && this.defaultCapacityWh) {
+      await this.setSettings({ capacity_wh: this.defaultCapacityWh }).catch(this.error);
     }
+    await this._syncBackupCapabilities();
 
     for (const output of Object.keys(SWITCH_MAP)) {
       this.registerCapabilityListener(`onoff.${output}`, async (value) => this.setOutput(output, value));
@@ -138,6 +138,18 @@ class PowerStationDevice extends Homey.Device {
   }
 
   get capacityWh() {
+    return Number(this.getSetting('capacity_wh')) || null;
+  }
+
+  // Backup time is only shown when the battery capacity is known.
+  async _syncBackupCapabilities() {
+    for (const capability of ['bluetti_backup_time', 'bluetti_backup_minutes']) {
+      if (this.capacityWh && !this.hasCapability(capability)) await this.addCapability(capability).catch(this.error);
+      if (!this.capacityWh && this.hasCapability(capability)) await this.removeCapability(capability).catch(this.error);
+    }
+  }
+
+  get defaultCapacityWh() {
     const model = String(this.getSetting('model') || this.getStoreValue('model') || '').toUpperCase();
     if (CAPACITY_WH[model]) return CAPACITY_WH[model];
     // The serial starts with the model, e.g. "EL30V22622110380002".
@@ -453,6 +465,12 @@ class PowerStationDevice extends Homey.Device {
   async onSettings({ newSettings, changedKeys }) {
     this.log(`Settings changed: ${changedKeys.map((k) => `${k}=${newSettings[k]}`).join(' ')}`);
     if (changedKeys.includes('poll_interval')) this.restartPolling(1000);
+    if (changedKeys.includes('capacity_wh')) {
+      // Settings are saved after this handler returns, so apply them right after.
+      this.homey.setTimeout(() => {
+        this._syncBackupCapabilities().then(() => this.restartPolling(500)).catch(this.error);
+      }, 500);
+    }
     if (changedKeys.includes('ble_fallback')) {
       if (newSettings.ble_fallback) {
         // Test right away so the user sees whether Bluetooth works, without waiting for an outage.

@@ -397,6 +397,22 @@
           }
         },
         {
+          "id": "capacity_wh",
+          "type": "number",
+          "value": 0,
+          "min": 0,
+          "max": 100000,
+          "label": {
+            "en": "Battery capacity"
+          },
+          "units": {
+            "en": "Wh"
+          },
+          "hint": {
+            "en": "Used for the Backup time estimate. Filled in automatically for the Elite 30 V2 (288 Wh). For other models, enter the capacity from the label or manual, including any expansion batteries. 0 hides Backup time."
+          }
+        },
+        {
           "type": "group",
           "label": {
             "en": "Bluetooth fallback"
