@@ -22,7 +22,6 @@ class BluettiApp extends Homey.App {
     this.cloud = new BluettiCloud({
       homey: this.homey,
       log: (...args) => this.log(...args),
-      error: (...args) => this.error(...args),
       onTokenChanged: () => this._onTokenChanged(),
     });
 
@@ -79,11 +78,9 @@ class BluettiApp extends Homey.App {
   }
 
   _onDeviceChanged(sn) {
-    if (!this._devices().some((d) => String(d.getData().id) === sn)) {
-      this.log(`Real-time notification for a power station not added to Homey (${maskSn(sn)})`);
-    }
     const device = this._devices().find((d) => String(d.getData().id) === sn);
     if (device) device.onCloudNotification();
+    else this.log(`Real-time notification for a power station not added to Homey (${maskSn(sn)})`);
   }
 
   async _onRealtimeAuthError(code) {

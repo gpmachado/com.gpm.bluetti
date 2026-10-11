@@ -1,6 +1,6 @@
 {
   "0.4.0": {
-    "en": "New: Bluetooth fallback – when Wi-Fi or the BLUETTI cloud is down, battery level, power and time remaining are read over Bluetooth (turn it on in the device settings). New: Backup time (set the battery capacity in the device settings; pre-filled for Elite 30 V2) and \"Full\" when the battery is full. Recovers automatically when the power station is re-added in the BLUETTI app. Real-time connection no longer reconnects every few minutes. Better diagnostics, with a \"Detailed logging\" option."
+    "en": "New: Bluetooth fallback – when Wi-Fi or the BLUETTI cloud is down, battery level, power and time remaining are read over Bluetooth (turn it on in the device settings). New: Backup time (set the battery capacity in the device settings; pre-filled for Elite 30 V2) and \"Full\" when the battery is full. Recovers automatically when the power station is re-added in the BLUETTI app. Real-time connection no longer reconnects every few minutes. Better diagnostics, with a \"Detailed logging\" option. Stability fixes: a temporary BLUETTI login-server error no longer signs you out, and the real-time connection can no longer open twice."
   },
   "0.3.2": {
     "en": "Lower memory use."

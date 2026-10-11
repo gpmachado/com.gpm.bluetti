@@ -32,8 +32,6 @@ const WORK_MODES = {
   workmode_3: 'custom_ups',
 };
 
-const KNOWN_CODES = new Set([...Object.keys(NUMERIC_MAP), ...Object.values(SWITCH_MAP), 'SetCtrlWorkMode']);
-
 // Default battery capacity per model (Wh), for the "Backup time" estimate. Users of other
 // models (or with expansion batteries) enter their capacity in the device settings.
 const CAPACITY_WH = {
@@ -65,7 +63,6 @@ class PowerStationDevice extends Homey.Device {
     this.sn = this.getData().id;
     this._failures = 0;
     this._online = null;
-    this._loggedUnknown = new Set();
     this._pollTimer = null;
     this._polling = false;
     this._snapshotLogged = false;
@@ -191,7 +188,11 @@ class PowerStationDevice extends Homey.Device {
   }
 
   async poll() {
-    if (this._polling) return;
+    if (this._polling) {
+      // A notification or command asked for fresh values mid-read: read again right after.
+      this._pollAgain = true;
+      return;
+    }
     this._polling = true;
     try {
       let product = await this._fetchProduct();
@@ -213,7 +214,8 @@ class PowerStationDevice extends Homey.Device {
       this._noteError(err);
       if (err instanceof BluettiAuthError) {
         this.error('Auth error:', err.message);
-        if (!(await this._bleFallback())) await this.setUnavailable(this.homey.__('errors.auth')).catch(this.error);
+        // Still read over Bluetooth, but tell the user to sign in again (Repair).
+        if (!(await this._bleFallback('errors.auth'))) await this.setUnavailable(this.homey.__('errors.auth')).catch(this.error);
       } else {
         this._failures += 1;
         this._stats.pollFails += 1;
@@ -224,6 +226,10 @@ class PowerStationDevice extends Homey.Device {
       }
     } finally {
       this._polling = false;
+      if (this._pollAgain && !this._deleted) {
+        this._pollAgain = false;
+        this.restartPolling();
+      }
     }
   }
 
@@ -280,10 +286,6 @@ class PowerStationDevice extends Homey.Device {
       if (!entry || !entry.fnCode) continue;
       states[entry.fnCode] = entry.fnValue;
       entries[entry.fnCode] = entry;
-      if (!KNOWN_CODES.has(entry.fnCode) && !this._loggedUnknown.has(entry.fnCode)) {
-        this._loggedUnknown.add(entry.fnCode);
-        this.log(`Unmapped fnCode ${entry.fnCode} (${entry.fnName}, ${entry.fnType}) = ${entry.fnValue}`);
-      }
     }
 
     for (const [fnCode, capability] of Object.entries(NUMERIC_MAP)) {
@@ -316,15 +318,7 @@ class PowerStationDevice extends Homey.Device {
     }
 
     for (const [output, fnCode] of Object.entries(SWITCH_MAP)) {
-      if (states[fnCode] === undefined) continue;
-      const on = String(states[fnCode]) === '1';
-      const capability = `onoff.${output}`;
-      const previous = this.getCapabilityValue(capability);
-      await this._set(capability, on);
-      if (previous !== null && previous !== on) {
-        this.log(`Output ${output} turned ${on ? 'on' : 'off'} (reported by cloud)`);
-        this.homey.app.outputChangedTrigger.trigger(this, { state: on }, { output }).catch(this.error);
-      }
+      if (states[fnCode] !== undefined) await this._setOutputState(output, String(states[fnCode]) === '1', 'cloud');
     }
 
     if (states.SetCtrlWorkMode !== undefined) {
@@ -369,7 +363,7 @@ class PowerStationDevice extends Homey.Device {
   }
 
   // Cloud unusable: read over Bluetooth instead. Returns true when values are current.
-  async _bleFallback() {
+  async _bleFallback(warningKey = 'ble.warning') {
     if (!this.getSetting('ble_fallback')) return false;
     if (this._bleLastOk && Date.now() - this._bleLastOk < BLE_MIN_INTERVAL_MS) return true;
     try {
@@ -379,7 +373,7 @@ class PowerStationDevice extends Homey.Device {
         this.log('Cloud unavailable, using Bluetooth fallback');
       }
       await this.setAvailable().catch(this.error);
-      await this.setWarning(this.homey.__('ble.warning')).catch(this.error);
+      await this.setWarning(this.homey.__(warningKey)).catch(this.error);
       return true;
     } catch (err) {
       this._stats.bleFails += 1;
@@ -394,11 +388,29 @@ class PowerStationDevice extends Homey.Device {
     if (this._bleBusy) return this._bleBusy;
     this._bleBusy = (async () => {
       const started = Date.now();
-      const ad = await this.ble.findAdvertisement({ peripheralUuid: this.getStoreValue('ble_uuid'), serial: this.sn });
-      if (!ad) throw new Error(this.homey.__('ble.not_found'));
-      if (ad.uuid && ad.uuid !== this.getStoreValue('ble_uuid')) await this.setStoreValue('ble_uuid', ad.uuid).catch(this.error);
+      const find = async () => {
+        const found = await this.ble.findAdvertisement({ peripheralUuid: this.getStoreValue('ble_uuid'), serial: this.sn });
+        if (!found) throw new Error(this.homey.__('ble.not_found'));
+        if (found.uuid && found.uuid !== this.getStoreValue('ble_uuid')) await this.setStoreValue('ble_uuid', found.uuid).catch(this.error);
+        return found;
+      };
 
-      const { values, rssi } = await this.ble.read(ad);
+      // Reuse the last advertisement: finding it again costs ~10 s per read.
+      // If it went stale, find the power station again and retry once.
+      let ad = this._bleAd;
+      let result;
+      try {
+        if (!ad) ad = await find();
+        result = await this.ble.read(ad);
+      } catch (err) {
+        if (!this._bleAd) throw err;
+        this.log(`Cached Bluetooth advertisement failed (${err.message}), searching again`);
+        this._bleAd = null;
+        ad = await find();
+        result = await this.ble.read(ad);
+      }
+      this._bleAd = ad;
+      const { values, rssi } = result;
       this._bleLastOk = Date.now();
       this._stats.bleReads += 1;
       this.log(`Bluetooth read in ${Date.now() - started} ms (RSSI ${rssi}):`, JSON.stringify(values));
@@ -451,13 +463,19 @@ class PowerStationDevice extends Homey.Device {
       throw err;
     }
 
+    await this._setOutputState(output, on, 'Homey');
+    this.restartPolling(POST_COMMAND_POLL_MS);
+  }
+
+  // Stores an output state and fires "output changed" once per real change.
+  async _setOutputState(output, on, source) {
     const capability = `onoff.${output}`;
     const previous = this.getCapabilityValue(capability);
     await this._set(capability, on);
     if (previous !== null && previous !== on) {
+      this.log(`Output ${output} turned ${on ? 'on' : 'off'} (by ${source})`);
       this.homey.app.outputChangedTrigger.trigger(this, { state: on }, { output }).catch(this.error);
     }
-    this.restartPolling(POST_COMMAND_POLL_MS);
   }
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────
