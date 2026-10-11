@@ -188,12 +188,9 @@ class PowerStationDevice extends Homey.Device {
   }
 
   async poll() {
-    if (this._polling) {
-      // A notification or command asked for fresh values mid-read: read again right after.
-      this._pollAgain = true;
-      return;
-    }
+    if (this._polling) return;
     this._polling = true;
+    this._lastPollStart = Date.now();
     try {
       let product = await this._fetchProduct();
       if (!product || String(product.isBindByCurUser) === '0') {
@@ -348,10 +345,14 @@ class PowerStationDevice extends Homey.Device {
   onCloudNotification() {
     this._stats.notifies += 1;
     if (this.detailedLog) this.log('Real-time notification from cloud');
+    const notifiedAt = Date.now();
     if (this._notifyTimer) return;
     this._notifyTimer = this.homey.setTimeout(() => {
       this._notifyTimer = null;
-      this.restartPolling();
+      // A read that started after the notification already has the new values.
+      if (this._lastPollStart >= notifiedAt) return;
+      if (this._polling) this._pollAgain = true;
+      else this.restartPolling();
     }, NOTIFY_DEBOUNCE_MS);
   }
 
