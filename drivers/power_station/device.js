@@ -42,6 +42,8 @@ const POST_COMMAND_POLL_MS = 4000;
 const REBIND_INTERVAL_MS = 10 * 60000;
 // Bluetooth fallback: never read more often than this (each read is a full connect + handshake).
 const BLE_MIN_INTERVAL_MS = 60000;
+// How long the last Bluetooth values stay acceptable when a read fails.
+const BLE_STALE_MS = 3 * BLE_MIN_INTERVAL_MS;
 // Coalesce bursts of real-time notifications into one read.
 const NOTIFY_DEBOUNCE_MS = 1500;
 
@@ -272,7 +274,8 @@ class PowerStationDevice extends Homey.Device {
       return true;
     } catch (err) {
       this.error('Bluetooth read failed:', err.message);
-      return false;
+      // Ride out a single miss: keep the last Bluetooth values while they are recent.
+      return Boolean(this._viaBle && this._bleLastOk && Date.now() - this._bleLastOk < BLE_STALE_MS);
     }
   }
 
