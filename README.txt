@@ -16,6 +16,9 @@ What you get
 - Real-time updates: changes made on the power station or in the BLUETTI app show up in Homey within seconds
 - Bluetooth fallback (optional): when Wi-Fi or the BLUETTI cloud is down, Homey reads battery level, power and time remaining directly over Bluetooth. Homey must be within Bluetooth range. Turn it on in the device settings. The power station accepts only one Bluetooth connection: while the BLUETTI phone app is connected to it over Bluetooth (it does this by itself when the cloud is down), Homey cannot read it. Close the BLUETTI app to let Homey connect.
 
+Timeline
+A message on the Homey timeline when the power station goes offline, comes back online, or the BLUETTI login needs to be renewed (can be turned off in the device settings).
+
 Flow cards
 - When: an output was turned on or off; the power station went offline; came back online
 - And: an output is on/off

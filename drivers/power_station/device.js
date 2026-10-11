@@ -114,6 +114,13 @@ class PowerStationDevice extends Homey.Device {
     return Boolean(this.getSetting('debug_logging'));
   }
 
+  // Timeline notification, unless the user turned them off for this device.
+  _notify(key, extra = {}) {
+    if (this.getSetting('timeline_notifications') === false) return;
+    const excerpt = this.homey.__(key, { name: this.getName(), ...extra });
+    this.homey.notifications.createNotification({ excerpt }).catch(this.error);
+  }
+
   // ── Diagnostics ────────────────────────────────────────────────────────────
 
   _resetStats() {
@@ -208,6 +215,7 @@ class PowerStationDevice extends Homey.Device {
       }
       if (!product) throw new Error('Power station not returned by the BLUETTI cloud');
       this._failures = 0;
+      this._authNotified = false;
       this._stats.polls += 1;
       if (!this._snapshotLogged || this.detailedLog) {
         // Full payload once per start (or every poll with detailed logging): the key to supporting new models.
@@ -220,6 +228,10 @@ class PowerStationDevice extends Homey.Device {
       this._noteError(err);
       if (err instanceof BluettiAuthError) {
         this.error('Auth error:', err.message);
+        if (!this._authNotified) {
+          this._authNotified = true;
+          this._notify('timeline.signed_out');
+        }
         // Still read over Bluetooth, but tell the user to sign in again (Repair).
         if (!(await this._bleFallback('errors.auth'))) await this.setUnavailable(this.homey.__('errors.auth')).catch(this.error);
       } else {
@@ -268,6 +280,8 @@ class PowerStationDevice extends Homey.Device {
       if (previous !== null) {
         const card = online ? this.homey.app.cameOnlineTrigger : this.homey.app.wentOfflineTrigger;
         card.trigger(this).catch(this.error);
+        if (online) this._notify('timeline.online');
+        else this._notify(this.getSetting('ble_fallback') ? 'timeline.offline_ble' : 'timeline.offline');
       }
     }
     if (!online) {

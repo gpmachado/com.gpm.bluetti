@@ -458,6 +458,25 @@
         {
           "type": "group",
           "label": {
+            "en": "Notifications"
+          },
+          "children": [
+            {
+              "id": "timeline_notifications",
+              "type": "checkbox",
+              "value": true,
+              "label": {
+                "en": "Timeline notifications"
+              },
+              "hint": {
+                "en": "Post a message to the Homey timeline when the power station goes offline, comes back online, or the BLUETTI login needs to be renewed."
+              }
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": {
             "en": "Diagnostics"
           },
           "children": [

@@ -16,5 +16,11 @@
     "status_ok": "OK at __time__ – battery __soc__%",
     "status_error": "Failed: __message__"
   },
-  "full": "Full"
+  "full": "Full",
+  "timeline": {
+    "offline": "__name__ lost its connection to the BLUETTI cloud (no Wi-Fi or internet on the power station). If it does not come back by itself, reconnect it with the BLUETTI app.",
+    "offline_ble": "__name__ lost its connection to the BLUETTI cloud (no Wi-Fi or internet on the power station). Homey keeps reading it over Bluetooth. If it does not come back by itself, reconnect it with the BLUETTI app.",
+    "online": "__name__ is back online.",
+    "signed_out": "BLUETTI: signed out. Open __name__ and choose Repair to sign in again."
+  }
 }
