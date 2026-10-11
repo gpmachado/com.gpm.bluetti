@@ -1,6 +1,7 @@
 'use strict';
 
 const Homey = require('homey');
+const { maskSn } = require('../../lib/diag');
 
 class PowerStationDriver extends Homey.Driver {
 
@@ -57,7 +58,8 @@ class PowerStationDriver extends Homey.Driver {
 
     session.setHandler('list_devices', async () => {
       const products = await this.cloud.getDevices();
-      this.log(`BLUETTI account has ${products.length} device(s)`);
+      this.log(`BLUETTI account has ${products.length} device(s): `
+        + products.map((p) => `${p.model || '?'} ${maskSn(p.sn)} online=${p.online}`).join(', '));
       return products.map((product) => ({
         name: product.name || product.model || `BLUETTI ${product.sn}`,
         data: { id: product.sn },

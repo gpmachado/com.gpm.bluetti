@@ -3,6 +3,7 @@
 const Homey = require('homey');
 const { BluettiCloud, BluettiAuthError } = require('./lib/BluettiCloud');
 const { BluettiStomp } = require('./lib/BluettiStomp');
+const { maskSn } = require('./lib/diag');
 
 class BluettiApp extends Homey.App {
 
@@ -36,7 +37,10 @@ class BluettiApp extends Homey.App {
     this.homey.flow.getConditionCard('output_is_on')
       .registerRunListener(async (args) => args.device.getCapabilityValue(`onoff.${args.output}`) === true);
 
-    this.log('BLUETTI app initialized');
+    const mem = Math.round(process.memoryUsage().rss / 1048576);
+    this.log(`BLUETTI app v${this.homey.manifest.version} initialized on Homey ${this.homey.version}`
+      + ` (${this.homey.platform}${this.homey.platformVersion ? ` v${this.homey.platformVersion}` : ''}),`
+      + ` Node ${process.version}, ${mem} MB, signed in: ${this.cloud.hasToken()}`);
   }
 
   async onUninit() {
@@ -65,6 +69,9 @@ class BluettiApp extends Homey.App {
   }
 
   _onDeviceChanged(sn) {
+    if (!this._devices().some((d) => String(d.getData().id) === sn)) {
+      this.log(`Real-time notification for a power station not added to Homey (${maskSn(sn)})`);
+    }
     const device = this._devices().find((d) => String(d.getData().id) === sn);
     if (device) device.onCloudNotification();
   }

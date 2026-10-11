@@ -57,5 +57,24 @@
       "en": "Model"
     },
     "value": ""
+  },
+  {
+    "type": "group",
+    "label": {
+      "en": "Diagnostics"
+    },
+    "children": [
+      {
+        "id": "debug_logging",
+        "type": "checkbox",
+        "value": false,
+        "label": {
+          "en": "Detailed logging"
+        },
+        "hint": {
+          "en": "Writes every cloud reading and real-time notification to the app log. Turn this on, wait a few minutes, then send a diagnostics report from the app page. No passwords or tokens are logged."
+        }
+      }
+    ]
   }
 ]

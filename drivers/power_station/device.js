@@ -3,6 +3,7 @@
 const Homey = require('homey');
 const { BluettiAuthError } = require('../../lib/BluettiCloud');
 const { BluettiBleReader } = require('../../lib/ble/BluettiBleReader');
+const { maskSn, formatStates } = require('../../lib/diag');
 
 // fnCode (BLUETTI cloud) → numeric capability. Verified on Elite 30 V2.
 const NUMERIC_MAP = {
@@ -55,6 +56,8 @@ const BLE_MIN_INTERVAL_MS = 60000;
 const BLE_STALE_MS = 3 * BLE_MIN_INTERVAL_MS;
 // Coalesce bursts of real-time notifications into one read.
 const NOTIFY_DEBOUNCE_MS = 1500;
+// Interval of the diagnostic summary line in the log.
+const SUMMARY_INTERVAL_MS = 60 * 60000;
 
 class PowerStationDevice extends Homey.Device {
 
@@ -65,6 +68,8 @@ class PowerStationDevice extends Homey.Device {
     this._loggedUnknown = new Set();
     this._pollTimer = null;
     this._polling = false;
+    this._snapshotLogged = false;
+    this._resetStats();
 
     // Capabilities added after the first release.
     for (const capability of ['bluetti_soc', 'bluetti_time_to_empty', 'bluetti_time_to_full']) {
@@ -93,11 +98,43 @@ class PowerStationDevice extends Homey.Device {
     this.restartPolling();
     // Deferred so getDevices() already includes this device.
     this.homey.setTimeout(() => this.homey.app.updateRealtime(), 1000);
-    this.log(`Power station ${this.getName()} initialized`);
+    this._summaryTimer = this.homey.setInterval(() => this._logSummary(), SUMMARY_INTERVAL_MS);
+    this.log(`Power station ${this.getName()} initialized: sn=${maskSn(this.sn)} model=${this.getSetting('model') || '?'}`
+      + ` capacity=${this.capacityWh || '?'}Wh poll=${this.getSetting('poll_interval')}s`
+      + ` bleFallback=${this.getSetting('ble_fallback') ? 'on' : 'off'} detailedLog=${this.detailedLog ? 'on' : 'off'}`);
   }
 
   get cloud() {
     return this.homey.app.cloud;
+  }
+
+  get detailedLog() {
+    return Boolean(this.getSetting('debug_logging'));
+  }
+
+  // ── Diagnostics ────────────────────────────────────────────────────────────
+
+  _resetStats() {
+    this._stats = {
+      since: Date.now(), polls: 0, pollFails: 0, notifies: 0, bleReads: 0, bleFails: 0, lastError: null,
+    };
+  }
+
+  _noteError(err) {
+    this._stats.lastError = `${new Date().toISOString()} ${err.message}`;
+  }
+
+  // One line per hour so diagnostic reports show how the device behaved over time.
+  _logSummary() {
+    const st = this._stats;
+    const minutes = Math.round((Date.now() - st.since) / 60000);
+    this.log(`Summary (${minutes} min): cloudPolls=${st.polls} cloudFails=${st.pollFails}`
+      + ` realtimeNotifies=${st.notifies} realtime=${this.homey.app.realtime.connected ? 'up' : 'down'}`
+      + ` bleReads=${st.bleReads} bleFails=${st.bleFails} viaBle=${Boolean(this._viaBle)}`
+      + ` online=${this._online} soc=${this.getCapabilityValue('measure_battery')}`
+      + ` mode=${this.getCapabilityValue('bluetti_work_mode')}`
+      + `${st.lastError ? ` lastError="${st.lastError}"` : ''}`);
+    this._resetStats();
   }
 
   get capacityWh() {
@@ -152,13 +189,22 @@ class PowerStationDevice extends Homey.Device {
       }
       if (!product) throw new Error('Power station not returned by the BLUETTI cloud');
       this._failures = 0;
+      this._stats.polls += 1;
+      if (!this._snapshotLogged || this.detailedLog) {
+        // Full payload once per start (or every poll with detailed logging): the key to supporting new models.
+        this._snapshotLogged = true;
+        this.log(`Cloud data: model=${product.model} online=${product.online} bound=${product.isBindByCurUser}`
+          + ` states: ${formatStates(product.stateList)}`);
+      }
       await this._applyProduct(product);
     } catch (err) {
+      this._noteError(err);
       if (err instanceof BluettiAuthError) {
         this.error('Auth error:', err.message);
         if (!(await this._bleFallback())) await this.setUnavailable(this.homey.__('errors.auth')).catch(this.error);
       } else {
         this._failures += 1;
+        this._stats.pollFails += 1;
         this.error(`Poll failed (${this._failures}/${MAX_FAILURES}):`, err.message);
         if (this._failures >= MAX_FAILURES && !(await this._bleFallback())) {
           await this.setUnavailable(this.homey.__('errors.cloud', { message: err.message })).catch(this.error);
@@ -194,6 +240,7 @@ class PowerStationDevice extends Homey.Device {
     if (online !== this._online) {
       const previous = this._online;
       this._online = online;
+      this.log(`Cloud reports the power station ${online ? 'online' : 'OFFLINE (no Wi-Fi/internet on the unit)'}`);
       if (previous !== null) {
         const card = online ? this.homey.app.cameOnlineTrigger : this.homey.app.wentOfflineTrigger;
         card.trigger(this).catch(this.error);
@@ -263,12 +310,16 @@ class PowerStationDevice extends Homey.Device {
       const previous = this.getCapabilityValue(capability);
       await this._set(capability, on);
       if (previous !== null && previous !== on) {
+        this.log(`Output ${output} turned ${on ? 'on' : 'off'} (reported by cloud)`);
         this.homey.app.outputChangedTrigger.trigger(this, { state: on }, { output }).catch(this.error);
       }
     }
 
     if (states.SetCtrlWorkMode !== undefined) {
-      await this._set('bluetti_work_mode', this._workModeLabel(entries.SetCtrlWorkMode));
+      const mode = this._workModeLabel(entries.SetCtrlWorkMode);
+      const previousMode = this.getCapabilityValue('bluetti_work_mode');
+      if (previousMode && previousMode !== mode) this.log(`Working mode changed: ${previousMode} → ${mode}`);
+      await this._set('bluetti_work_mode', mode);
     }
   }
 
@@ -289,6 +340,8 @@ class PowerStationDevice extends Homey.Device {
 
   // The cloud pushed "this device changed": re-read soon, coalescing bursts.
   onCloudNotification() {
+    this._stats.notifies += 1;
+    if (this.detailedLog) this.log('Real-time notification from cloud');
     if (this._notifyTimer) return;
     this._notifyTimer = this.homey.setTimeout(() => {
       this._notifyTimer = null;
@@ -317,6 +370,8 @@ class PowerStationDevice extends Homey.Device {
       await this.setWarning(this.homey.__('ble.warning')).catch(this.error);
       return true;
     } catch (err) {
+      this._stats.bleFails += 1;
+      this._noteError(err);
       this.error('Bluetooth read failed:', err.message);
       // Ride out a single miss: keep the last Bluetooth values while they are recent.
       return Boolean(this._viaBle && this._bleLastOk && Date.now() - this._bleLastOk < BLE_STALE_MS);
@@ -333,6 +388,7 @@ class PowerStationDevice extends Homey.Device {
 
       const { values, rssi } = await this.ble.read(ad);
       this._bleLastOk = Date.now();
+      this._stats.bleReads += 1;
       this.log(`Bluetooth read in ${Date.now() - started} ms (RSSI ${rssi}):`, JSON.stringify(values));
       await this._applyBleValues(values);
       const time = new Date().toLocaleTimeString('en-GB', { timeZone: this.homey.clock.getTimezone() });
@@ -375,7 +431,13 @@ class PowerStationDevice extends Homey.Device {
     const fnCode = SWITCH_MAP[output];
     if (!fnCode) throw new Error(`Unknown output ${output}`);
     this.log(`Setting ${fnCode} → ${on ? 1 : 0}`);
-    await this.cloud.control(this.sn, fnCode, on ? '1' : '0');
+    try {
+      await this.cloud.control(this.sn, fnCode, on ? '1' : '0');
+    } catch (err) {
+      this._noteError(err);
+      this.error(`Command ${fnCode} failed:`, err.message);
+      throw err;
+    }
 
     const capability = `onoff.${output}`;
     const previous = this.getCapabilityValue(capability);
@@ -389,6 +451,7 @@ class PowerStationDevice extends Homey.Device {
   // ── Lifecycle ──────────────────────────────────────────────────────────────
 
   async onSettings({ newSettings, changedKeys }) {
+    this.log(`Settings changed: ${changedKeys.map((k) => `${k}=${newSettings[k]}`).join(' ')}`);
     if (changedKeys.includes('poll_interval')) this.restartPolling(1000);
     if (changedKeys.includes('ble_fallback')) {
       if (newSettings.ble_fallback) {
@@ -409,6 +472,7 @@ class PowerStationDevice extends Homey.Device {
 
   _stop() {
     this._deleted = true;
+    if (this._summaryTimer) this.homey.clearInterval(this._summaryTimer);
     if (this._pollTimer) this.homey.clearTimeout(this._pollTimer);
     if (this._notifyTimer) this.homey.clearTimeout(this._notifyTimer);
     this._pollTimer = null;
