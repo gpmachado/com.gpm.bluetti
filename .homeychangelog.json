@@ -1,4 +1,7 @@
 {
+  "0.3.4": {
+    "en": "Real-time connection no longer reconnects every few minutes."
+  },
   "0.3.3": {
     "en": "Recovers automatically when the power station is removed and re-added in the BLUETTI app."
   },
