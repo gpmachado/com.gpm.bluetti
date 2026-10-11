@@ -364,6 +364,7 @@ class PowerStationDevice extends Homey.Device {
 
   async onDeleted() {
     this._stop();
+    this.log(`Power station ${this.getName()} removed`);
     this.homey.setTimeout(() => this.homey.app.updateRealtime(), 1000);
   }
 
