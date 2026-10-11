@@ -1,9 +1,20 @@
 'use strict';
 
+const v8 = require('v8');
 const Homey = require('homey');
 const { BluettiCloud, BluettiAuthError } = require('./lib/BluettiCloud');
 const { BluettiStomp } = require('./lib/BluettiStomp');
 const { maskSn } = require('./lib/diag');
+
+// process.memoryUsage() throws inside the Homey sandbox (no access to the process RSS),
+// so only the V8 heap is reported, and never at the cost of crashing.
+function heapMb() {
+  try {
+    return Math.round(v8.getHeapStatistics().used_heap_size / 1048576);
+  } catch (err) {
+    return '?';
+  }
+}
 
 class BluettiApp extends Homey.App {
 
@@ -37,10 +48,9 @@ class BluettiApp extends Homey.App {
     this.homey.flow.getConditionCard('output_is_on')
       .registerRunListener(async (args) => args.device.getCapabilityValue(`onoff.${args.output}`) === true);
 
-    const mem = Math.round(process.memoryUsage().rss / 1048576);
     this.log(`BLUETTI app v${this.homey.manifest.version} initialized on Homey ${this.homey.version}`
       + ` (${this.homey.platform}${this.homey.platformVersion ? ` v${this.homey.platformVersion}` : ''}),`
-      + ` Node ${process.version}, ${mem} MB, signed in: ${this.cloud.hasToken()}`);
+      + ` Node ${process.version}, heap ${heapMb()} MB, signed in: ${this.cloud.hasToken()}`);
   }
 
   async onUninit() {
