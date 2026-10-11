@@ -54,6 +54,8 @@ const BLE_MIN_INTERVAL_MS = 60000;
 const BLE_STALE_MS = 3 * BLE_MIN_INTERVAL_MS;
 // Coalesce bursts of real-time notifications into one read.
 const NOTIFY_DEBOUNCE_MS = 1500;
+// Safety-net polling while the real-time link is connected.
+const REALTIME_POLL_SEC = 300;
 // Interval of the diagnostic summary line in the log.
 const SUMMARY_INTERVAL_MS = 60 * 60000;
 
@@ -183,7 +185,11 @@ class PowerStationDevice extends Homey.Device {
     this._pollTimer = null;
     await this.poll();
     if (this._deleted) return;
-    const intervalSec = Math.max(15, Number(this.getSetting('poll_interval')) || 30);
+    // The real-time link pushes every change (including "went offline"), so polling is only a
+    // safety net while it is up. Without it, or while the cloud reports the unit offline, use the setting.
+    const configured = Math.max(15, Number(this.getSetting('poll_interval')) || 30);
+    const realtimeUp = this.homey.app.realtime.connected && this._online === true;
+    const intervalSec = realtimeUp ? Math.max(configured, REALTIME_POLL_SEC) : configured;
     if (!this._pollTimer) this._pollTimer = this.homey.setTimeout(() => this._pollLoop(), intervalSec * 1000);
   }
 

@@ -384,10 +384,10 @@
           "id": "poll_interval",
           "type": "number",
           "label": {
-            "en": "Update interval"
+            "en": "Update interval without real-time link"
           },
           "hint": {
-            "en": "Fallback polling interval. Changes are normally pushed instantly by the BLUETTI cloud; polling also refreshes power readings."
+            "en": "Changes are pushed instantly by the BLUETTI cloud. While that real-time link is connected, Homey only reads every 5 minutes as a safety net. This interval is used when the link is down or the power station is offline."
           },
           "value": 30,
           "min": 15,
