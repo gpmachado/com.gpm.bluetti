@@ -10,5 +10,8 @@
   },
   "0.3.0": {
     "en": "First public test version. Tested with BLUETTI Elite 30 V2."
+  },
+  "0.4.1": {
+    "en": "Shorter app description and readme. No functional changes."
   }
 }
