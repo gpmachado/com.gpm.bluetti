@@ -22,6 +22,11 @@ BLUETTI cloud API used by the official Home Assistant integration:
 - STOMP over WebSocket (`/api/edgeiotgw/ws-coordination/websocket`) for real-time change notifications
 - Optional Bluetooth fallback (read only): encrypted "V2" BLE protocol (ECDH + AES-CBC, MODBUS over GATT 0xFF01/0xFF02), registers from `bluetti_bt_lib/devices/el30v2.py`
 
+## Development
+
+Copy `env.json.dist` to `env.json` and fill in the OAuth client secret and app key from
+`custom_components/bluetti/profile/application.yaml` in the official Home Assistant integration.
+
 ## Credits
 
 - [bluetti-official/bluetti-home-assistant](https://github.com/bluetti-official/bluetti-home-assistant) — MIT, © 2025 Bluetti: API endpoints, OAuth client, real-time protocol, work-mode codes
