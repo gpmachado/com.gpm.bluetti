@@ -13,5 +13,8 @@
   },
   "0.4.1": {
     "en": "Shorter app description and readme. No functional changes."
+  },
+  "0.4.2": {
+    "en": "When BLUETTI's main server stops answering, the app now switches to your account's regional BLUETTI server automatically. Clearer diagnostics."
   }
 }
