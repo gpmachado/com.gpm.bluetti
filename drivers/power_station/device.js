@@ -141,6 +141,7 @@ class PowerStationDevice extends Homey.Device {
     const minutes = Math.round((Date.now() - st.since) / 60000);
     this.log(`Summary (${minutes} min): cloudPolls=${st.polls} cloudFails=${st.pollFails}`
       + ` realtimeNotifies=${st.notifies} realtime=${this.homey.app.realtime.connected ? 'up' : 'down'}`
+      + ` restHost=${this.cloud.restHost()}`
       + ` bleReads=${st.bleReads} bleFails=${st.bleFails} viaBle=${Boolean(this._viaBle)}`
       + ` online=${this._online} soc=${this.getCapabilityValue('measure_battery')}`
       + ` mode=${this.getCapabilityValue('bluetti_work_mode')}`
@@ -239,7 +240,7 @@ class PowerStationDevice extends Homey.Device {
       } else {
         this._failures += 1;
         this._stats.pollFails += 1;
-        this.error(`Poll failed (${this._failures}/${MAX_FAILURES}):`, err.message);
+        this.error(`Poll failed (${this._failures} in a row):`, err.message);
         if (this._failures >= MAX_FAILURES && !(await this._bleFallback())) {
           await this.setUnavailable(this.homey.__('errors.cloud', { message: err.message })).catch(this.error);
         }
