@@ -16,5 +16,8 @@
   },
   "0.4.2": {
     "en": "When BLUETTI's main server stops answering, the app now switches to your account's regional BLUETTI server automatically. Clearer diagnostics."
+  },
+  "0.4.3": {
+    "en": "New: Sleep mode switch and flow cards, for power stations that support it (such as the Elite 200 V2)."
   }
 }
