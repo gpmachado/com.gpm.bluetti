@@ -11,7 +11,8 @@
         { "id": "ac", "title": { "en": "AC output" } },
         { "id": "dc", "title": { "en": "DC output" } },
         { "id": "ac_eco", "title": { "en": "AC ECO" } },
-        { "id": "dc_eco", "title": { "en": "DC ECO" } }
+        { "id": "dc_eco", "title": { "en": "DC ECO" } },
+        { "id": "sleep", "title": { "en": "Sleep mode (some models)" } }
       ]
     }
   ]

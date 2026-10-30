@@ -22,6 +22,11 @@ const SWITCH_MAP = {
   dc: 'SetCtrlDc',
   ac_eco: 'SetACECO',
   dc_eco: 'SetDCECO',
+  sleep: 'SetSleepMode',
+};
+// Switches only some models have (e.g. Elite 200 V2): added when the cloud first reports them.
+const OPTIONAL_SWITCHES = {
+  sleep: { title: { en: 'Sleep mode' } },
 };
 
 // SetCtrlWorkMode values, named as in the BLUETTI app. All four confirmed on EL30V2.
@@ -86,7 +91,7 @@ class PowerStationDevice extends Homey.Device {
     await this._syncBackupCapabilities();
 
     for (const output of Object.keys(SWITCH_MAP)) {
-      this.registerCapabilityListener(`onoff.${output}`, async (value) => this.setOutput(output, value));
+      if (this.hasCapability(`onoff.${output}`)) this._listenOutput(output);
     }
 
     if (!this.getStoreValue('bound')) {
@@ -348,7 +353,9 @@ class PowerStationDevice extends Homey.Device {
     }
 
     for (const [output, fnCode] of Object.entries(SWITCH_MAP)) {
-      if (states[fnCode] !== undefined) await this._setOutputState(output, String(states[fnCode]) === '1', 'cloud');
+      if (states[fnCode] === undefined) continue;
+      if (OPTIONAL_SWITCHES[output] && !this.hasCapability(`onoff.${output}`)) await this._addOptionalOutput(output);
+      await this._setOutputState(output, String(states[fnCode]) === '1', 'cloud');
     }
 
     if (states.SetCtrlWorkMode !== undefined) {
@@ -493,6 +500,7 @@ class PowerStationDevice extends Homey.Device {
   async setOutput(output, on) {
     const fnCode = SWITCH_MAP[output];
     if (!fnCode) throw new Error(`Unknown output ${output}`);
+    this._requireOutput(output);
     this.log(`Setting ${fnCode} → ${on ? 1 : 0}`);
     try {
       await this.cloud.control(this.sn, fnCode, on ? '1' : '0');
@@ -504,6 +512,34 @@ class PowerStationDevice extends Homey.Device {
 
     await this._setOutputState(output, on, 'Homey');
     this.restartPolling(POST_COMMAND_POLL_MS);
+  }
+
+  // Optional switches (sleep mode) exist only on some models.
+  _requireOutput(output) {
+    if (!this.hasCapability(`onoff.${output}`)) {
+      throw new Error(this.homey.__('errors.not_supported', { output: OPTIONAL_SWITCHES[output].title.en.toLowerCase() }));
+    }
+  }
+
+  isOutputOn(output) {
+    this._requireOutput(output);
+    return this.getCapabilityValue(`onoff.${output}`) === true;
+  }
+
+  _listenOutput(output) {
+    this.registerCapabilityListener(`onoff.${output}`, async (value) => this.setOutput(output, value));
+  }
+
+  async _addOptionalOutput(output) {
+    const capability = `onoff.${output}`;
+    try {
+      await this.addCapability(capability);
+      await this.setCapabilityOptions(capability, { ...OPTIONAL_SWITCHES[output], uiComponent: 'button' });
+      this._listenOutput(output);
+      this.log(`This model supports ${output}: added ${capability}`);
+    } catch (err) {
+      this.error(`Could not add ${capability}:`, err.message);
+    }
   }
 
   // Stores an output state and fires "output changed" once per real change.

@@ -45,7 +45,7 @@ class BluettiApp extends Homey.App {
       .registerRunListener(async (args) => args.device.setOutput(args.output, args.state === 'on'));
 
     this.homey.flow.getConditionCard('output_is_on')
-      .registerRunListener(async (args) => args.device.getCapabilityValue(`onoff.${args.output}`) === true);
+      .registerRunListener(async (args) => args.device.isOutputOn(args.output));
 
     this.log(`BLUETTI app v${this.homey.manifest.version} initialized on Homey ${this.homey.version}`
       + ` (${this.homey.platform}${this.homey.platformVersion ? ` v${this.homey.platformVersion}` : ''}),`
