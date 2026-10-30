@@ -29,7 +29,7 @@ const homeySignPub = (() => {
 
 const REGISTERS = { 102: 87, 104: 1986, 140: 0, 142: 197, 144: 0, 146: 374 };
 
-function simulatedPowerStation() {
+function simulatedPowerStation({ gattDelayMs = 0 } = {}) {
   const challenge = crypto.randomBytes(4);
   const iv = md5(Buffer.from(challenge).reverse());
   const key = Buffer.alloc(16);
@@ -38,6 +38,8 @@ function simulatedPowerStation() {
   const devPub = ecdh.generateKeys().subarray(1);
   let secure = null;
   let notify;
+  // Like Homey's BLE stack: one GATT operation at a time, another one meanwhile fails with "In Progress".
+  let writing = false;
   let rx = Buffer.alloc(0);
 
   // Notifications arrive in 20-byte pieces, like over a default-MTU BLE link.
@@ -85,13 +87,27 @@ function simulatedPowerStation() {
 
   const notifyChar = {
     uuid: '0000ff01-0000-1000-8000-00805f9b34fb',
+    // Subscribing is itself a GATT operation; the unit sends its challenge before it completes.
     subscribeToNotifications: async (cb) => {
       notify = cb;
+      writing = true;
       send(kex(Buffer.concat([Buffer.from('0104', 'hex'), challenge])));
+      if (gattDelayMs) await new Promise((r) => setTimeout(r, gattDelayMs));
+      writing = false;
     },
     unsubscribeFromNotifications: async () => {},
   };
-  const writeChar = { uuid: '0000ff02-0000-1000-8000-00805f9b34fb', write: async (d) => onWrite(Buffer.from(d)) };
+  const write = async (d) => {
+    if (writing) throw new Error('In Progress');
+    writing = true;
+    try {
+      if (gattDelayMs) await new Promise((r) => setTimeout(r, gattDelayMs));
+      onWrite(Buffer.from(d));
+    } finally {
+      writing = false;
+    }
+  };
+  const writeChar = { uuid: '0000ff02-0000-1000-8000-00805f9b34fb', write };
   const peripheral = {
     discoverAllServicesAndCharacteristics: async () => [{ uuid: 'ff00', characteristics: [notifyChar, writeChar] }],
     disconnect: async () => {},
@@ -120,4 +136,16 @@ test('reads an encrypted power station end to end', async () => {
   assert.deepStrictEqual(values, {
     soc: 87, time_remaining_min: 1986, dc_output_power: 0, ac_output_power: 197, dc_input_power: 0, ac_input_power: 374,
   });
+});
+
+// The challenge arrives while subscribing is still in flight; the reply must wait for it.
+test('waits for the subscription before answering the handshake', async () => {
+  const ad = simulatedPowerStation({ gattDelayMs: 20 });
+  const reader = new BluettiBleReader({
+    homey: { ble: {} },
+    log: () => {},
+    sessionOptions: { peerSignKeyDer: k2.publicKey.export({ type: 'spki', format: 'der' }) },
+  });
+  const { values } = await reader.read(ad);
+  assert.strictEqual(values.soc, 87);
 });
