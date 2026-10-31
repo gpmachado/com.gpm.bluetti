@@ -22,5 +22,8 @@
   },
   "0.4.4": {
     "en": "Bluetooth fallback fixed on Homey Pro, and it now also shows the AC/DC/ECO outputs and switches them while the power station is offline in the BLUETTI cloud (the cloud accepts commands for an offline unit but never delivers them). Sleep mode can be switched before the first reading. Commands that get no answer from the cloud now fail with a clear message instead of a timeout."
+  },
+  "0.4.5": {
+    "en": "The \"Cloud unavailable – reading over Bluetooth\" warning no longer stays on the device after the cloud is working again."
   }
 }

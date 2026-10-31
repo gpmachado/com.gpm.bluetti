@@ -79,6 +79,9 @@ class PowerStationDevice extends Homey.Device {
     this._polling = false;
     this._snapshotLogged = false;
     this._resetStats();
+    // Homey keeps a device warning across app restarts and updates, and only the Bluetooth fallback
+    // clears it when the cloud comes back. Start clean: the first read sets it again if needed.
+    await this.unsetWarning().catch(this.error);
 
     // Capabilities added after the first release.
     for (const capability of ['bluetti_soc', 'bluetti_time_to_empty', 'bluetti_time_to_full']) {
