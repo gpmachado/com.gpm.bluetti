@@ -20,7 +20,7 @@ BLUETTI cloud API used by the official Home Assistant integration:
 - OAuth2 login at `sso.bluettipower.com` (via Homey's OAuth2 callback)
 - `GET /api/bluiotdata/ha/v1/deviceStates` for values, `POST /ha/v1/fulfillment` for control
 - STOMP over WebSocket (`/api/edgeiotgw/ws-coordination/websocket`) for real-time change notifications
-- Optional Bluetooth fallback (read only): encrypted "V2" BLE protocol (ECDH + AES-CBC, MODBUS over GATT 0xFF01/0xFF02), registers from `bluetti_bt_lib/devices/el30v2.py`
+- Optional Bluetooth fallback (reads values and AC/DC/ECO outputs; switches those outputs while the cloud reports the unit offline): encrypted "V2" BLE protocol (ECDH + AES-CBC, MODBUS over GATT 0xFF01/0xFF02), registers from `bluetti_bt_lib/devices/el30v2.py`
 
 ## Development
 

@@ -17,8 +17,10 @@ const { BluettiCloud } = require('../lib/BluettiCloud');
 Module._load = realLoad;
 
 // Fakes https.request: `hosts` maps hostname → 'timeout' or { status, json }.
+let seenTimeouts = [];
 function fakeHttps(hosts) {
   const seen = [];
+  seenTimeouts = [];
   https.request = (url, opts, onRes) => {
     const { hostname } = new URL(url);
     seen.push(hostname);
@@ -27,6 +29,7 @@ function fakeHttps(hosts) {
     req.destroy = (err) => setImmediate(() => req.emit('error', err));
     req.end = () => setImmediate(() => {
       const r = hosts[hostname];
+      seenTimeouts.push(opts.timeout);
       if (r === 'timeout') return req.emit('timeout');
       const res = new EventEmitter();
       res.statusCode = r.status;
@@ -70,4 +73,10 @@ test('without a regional host the timeout is reported as before', async () => {
   const cloud = makeCloud(null);
   await assert.rejects(cloud.getDeviceStates(['1']), /timed out/);
   assert.deepStrictEqual(seen, ['gw.bluettipower.com']);
+});
+
+test('a command stays within Homey\'s 10 s limit', async () => {
+  fakeHttps({ 'gw.bluettipower.com': OK });
+  await makeCloud(null).control('1', 'SetCtrlDc', 1);
+  assert.ok(seenTimeouts[0] <= 8000, `timeout ${seenTimeouts[0]}`);
 });

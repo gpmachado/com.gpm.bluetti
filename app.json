@@ -1,7 +1,7 @@
 {
   "_comment": "This file is generated. Please edit .homeycompose/app.json instead.",
   "id": "com.gpm.bluetti",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "compatibility": ">=12.0.0",
   "sdk": 3,
   "platforms": [
@@ -441,10 +441,10 @@
               "type": "checkbox",
               "value": false,
               "label": {
-                "en": "Read over Bluetooth when the cloud is unavailable"
+                "en": "Use Bluetooth when the cloud is unavailable"
               },
               "hint": {
-                "en": "When Wi-Fi or the BLUETTI cloud is down, Homey reads battery level, power and time remaining directly from the power station over Bluetooth (read only). Homey must be within Bluetooth range. Turning this on runs a test read right away. Tested with Elite 30 V2."
+                "en": "When Wi-Fi or the BLUETTI cloud is down, Homey reads battery level, power, time remaining and the AC/DC/ECO outputs directly from the power station over Bluetooth, and switches those outputs over Bluetooth too. Homey must be within Bluetooth range, and the BLUETTI app must not be connected to the power station over Bluetooth at the same time. Turning this on runs a test read right away. Tested with Elite 30 V2."
               }
             },
             {

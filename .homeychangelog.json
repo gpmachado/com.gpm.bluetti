@@ -19,5 +19,8 @@
   },
   "0.4.3": {
     "en": "New: Sleep mode switch and flow cards, for power stations that support it (such as the Elite 200 V2)."
+  },
+  "0.4.4": {
+    "en": "Bluetooth fallback fixed on Homey Pro, and it now also shows the AC/DC/ECO outputs and switches them while the power station is offline in the BLUETTI cloud (the cloud accepts commands for an offline unit but never delivers them). Sleep mode can be switched before the first reading. Commands that get no answer from the cloud now fail with a clear message instead of a timeout."
   }
 }

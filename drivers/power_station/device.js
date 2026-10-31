@@ -511,21 +511,26 @@ class PowerStationDevice extends Homey.Device {
   async setOutput(output, on) {
     const fnCode = SWITCH_MAP[output];
     if (!fnCode) throw new Error(`Unknown output ${output}`);
-    this._requireOutput(output);
     // The cloud accepts commands for an offline unit and drops them: go over Bluetooth instead.
     if (this._online === false || this._viaBle) {
+      this._requireOutput(output);
       await this._setOutputOverBle(output, on);
       return;
     }
+    // An optional switch (sleep mode) is added once the cloud reports it; until then, let the
+    // cloud decide whether this model supports it.
+    const addOptional = Boolean(OPTIONAL_SWITCHES[output]) && !this.hasCapability(`onoff.${output}`);
     this.log(`Setting ${fnCode} → ${on ? 1 : 0}`);
     try {
       await this.cloud.control(this.sn, fnCode, on ? '1' : '0');
     } catch (err) {
       this._noteError(err);
       this.error(`Command ${fnCode} failed:`, err.message);
-      throw err;
+      if (err instanceof BluettiAuthError) throw err;
+      throw new Error(this.homey.__('errors.cloud', { message: err.message }));
     }
 
+    if (addOptional) await this._addOptionalOutput(output);
     await this._setOutputState(output, on, 'Homey');
     this.restartPolling(POST_COMMAND_POLL_MS);
   }
