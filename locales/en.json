@@ -3,7 +3,9 @@
     "auth": "Signed out of BLUETTI. Open the device settings and choose Repair to sign in again.",
     "cloud": "Cannot reach the BLUETTI cloud: __message__",
     "offline": "The power station is offline in the BLUETTI cloud. Check its Wi-Fi connection.",
-    "not_supported": "This power station does not support __output__."
+    "not_supported": "This power station does not support __output__.",
+    "ble_command": "The power station is offline in the BLUETTI cloud and could not be reached over Bluetooth: __message__",
+    "ble_refused": "The power station did not apply the command."
   },
   "work_mode": {
     "pv_priority_ups": "PV Priority UPS",
@@ -12,7 +14,7 @@
     "custom_ups": "Custom UPS"
   },
   "ble": {
-    "warning": "Cloud unavailable – reading over Bluetooth (outputs and working mode not updated)",
+    "warning": "Cloud unavailable – connected over Bluetooth (working mode not updated)",
     "not_found": "Power station not found over Bluetooth. Is Homey within range?",
     "status_ok": "OK at __time__ – battery __soc__%",
     "status_error": "Failed: __message__"

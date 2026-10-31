@@ -430,43 +430,54 @@ class PowerStationDevice extends Homey.Device {
     }
   }
 
+  // The unit takes one Bluetooth connection at a time: reads and commands wait for each other.
+  _bleExclusive(fn) {
+    const run = (this._bleChain || Promise.resolve()).then(fn);
+    this._bleChain = run.catch(() => {});
+    return run;
+  }
+
+  // Finds the power station, reusing the last advertisement: finding it again costs ~10 s.
+  // If that one went stale, finds the power station again and retries once.
+  async _bleWithAd(fn) {
+    const find = async () => {
+      const found = await this.ble.findAdvertisement({ peripheralUuid: this.getStoreValue('ble_uuid'), serial: this.sn });
+      if (!found) throw new Error(this.homey.__('ble.not_found'));
+      if (found.uuid && found.uuid !== this.getStoreValue('ble_uuid')) await this.setStoreValue('ble_uuid', found.uuid).catch(this.error);
+      return found;
+    };
+    let ad = this._bleAd;
+    let result;
+    try {
+      if (!ad) ad = await find();
+      result = await fn(ad);
+    } catch (err) {
+      if (!this._bleAd) throw err;
+      this.log(`Cached Bluetooth advertisement failed (${err.message}), searching again`);
+      this._bleAd = null;
+      ad = await find();
+      result = await fn(ad);
+    }
+    this._bleAd = ad;
+    return result;
+  }
+
   async _bleRead() {
     if (this._bleBusy) return this._bleBusy;
-    this._bleBusy = (async () => {
+    this._bleBusy = this._bleExclusive(async () => {
       const started = Date.now();
-      const find = async () => {
-        const found = await this.ble.findAdvertisement({ peripheralUuid: this.getStoreValue('ble_uuid'), serial: this.sn });
-        if (!found) throw new Error(this.homey.__('ble.not_found'));
-        if (found.uuid && found.uuid !== this.getStoreValue('ble_uuid')) await this.setStoreValue('ble_uuid', found.uuid).catch(this.error);
-        return found;
-      };
-
-      // Reuse the last advertisement: finding it again costs ~10 s per read.
-      // If it went stale, find the power station again and retry once.
-      let ad = this._bleAd;
-      let result;
-      try {
-        if (!ad) ad = await find();
-        result = await this.ble.read(ad);
-      } catch (err) {
-        if (!this._bleAd) throw err;
-        this.log(`Cached Bluetooth advertisement failed (${err.message}), searching again`);
-        this._bleAd = null;
-        ad = await find();
-        result = await this.ble.read(ad);
-      }
-      this._bleAd = ad;
-      const { values } = result;
+      const { values, outputs } = await this._bleWithAd((ad) => this.ble.read(ad));
       this._bleLastOk = Date.now();
       this._stats.bleReads += 1;
-      this.log(`Bluetooth read in ${Date.now() - started} ms:`, JSON.stringify(values));
+      this.log(`Bluetooth read in ${Date.now() - started} ms:`, JSON.stringify(values), 'outputs:', JSON.stringify(outputs));
       await this._applyBleValues(values);
+      for (const [output, on] of Object.entries(outputs)) await this._setOutputState(output, on, 'power station');
       const time = new Date().toLocaleTimeString('en-GB', { timeZone: this.homey.clock.getTimezone() });
       await this.setSettings({
         ble_status: this.homey.__('ble.status_ok', { time, soc: values.soc }),
       }).catch(this.error);
       return values;
-    })().finally(() => {
+    }).finally(() => {
       this._bleBusy = null;
     });
     return this._bleBusy;
@@ -501,6 +512,11 @@ class PowerStationDevice extends Homey.Device {
     const fnCode = SWITCH_MAP[output];
     if (!fnCode) throw new Error(`Unknown output ${output}`);
     this._requireOutput(output);
+    // The cloud accepts commands for an offline unit and drops them: go over Bluetooth instead.
+    if (this._online === false || this._viaBle) {
+      await this._setOutputOverBle(output, on);
+      return;
+    }
     this.log(`Setting ${fnCode} → ${on ? 1 : 0}`);
     try {
       await this.cloud.control(this.sn, fnCode, on ? '1' : '0');
@@ -512,6 +528,24 @@ class PowerStationDevice extends Homey.Device {
 
     await this._setOutputState(output, on, 'Homey');
     this.restartPolling(POST_COMMAND_POLL_MS);
+  }
+
+  async _setOutputOverBle(output, on) {
+    if (!this.getSetting('ble_fallback') || !BluettiBleReader.hasOutput(output)) {
+      throw new Error(this.homey.__('errors.offline'));
+    }
+    this.log(`Setting ${output} → ${on ? 1 : 0} over Bluetooth`);
+    let state;
+    try {
+      state = await this._bleExclusive(() => this._bleWithAd((ad) => this.ble.setOutput(ad, output, on)));
+    } catch (err) {
+      this._noteError(err);
+      this.error(`Bluetooth command ${output} failed:`, err.message);
+      throw new Error(this.homey.__('errors.ble_command', { message: err.message }));
+    }
+    // Store what the unit reports, so a refused command does not show as done.
+    await this._setOutputState(output, state, 'Homey over Bluetooth');
+    if (state !== on) throw new Error(this.homey.__('errors.ble_refused'));
   }
 
   // Optional switches (sleep mode) exist only on some models.
